@@ -49,10 +49,6 @@ export default function Sidebar() {
 
     getUser();
 
-    // =====================================================
-    // LISTEN AUTH STATE
-    // =====================================================
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -155,15 +151,15 @@ export default function Sidebar() {
   // =====================================================
 
   return (
-    <aside className="w-64 min-h-screen bg-slate-900 text-white p-6 flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-slate-900 text-white p-6 flex flex-col z-50">
 
       {/* =================================================
           LOGO
       ================================================= */}
 
-      <div className="mb-8">
+      <div className="mb-8 shrink-0">
         <h1 className="text-xl font-bold">
-          Issue Management
+          Helpdesk System
         </h1>
 
         <p className="text-xs text-slate-400 mt-1">
@@ -175,19 +171,15 @@ export default function Sidebar() {
           LOGGED-IN USER
       ================================================= */}
 
-      <div className="mb-8 p-4 rounded-xl bg-slate-800 border border-slate-700">
+      <div className="mb-8 p-4 rounded-xl bg-slate-800 border border-slate-700 shrink-0">
 
         <div className="flex items-center gap-3">
 
-          {/* AVATAR */}
-
-          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white uppercase">
+          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white uppercase shrink-0">
             {loadingUser
               ? "..."
               : user?.name?.charAt(0) || "U"}
           </div>
-
-          {/* USER INFO */}
 
           <div className="min-w-0 flex-1">
 
@@ -213,7 +205,7 @@ export default function Sidebar() {
           MENU
       ================================================= */}
 
-      <nav className="space-y-2">
+      <nav className="space-y-2 flex-1 overflow-y-auto">
 
         {menuItems.map((item) => {
 
@@ -249,7 +241,7 @@ export default function Sidebar() {
           LOGOUT
       ================================================= */}
 
-      <div className="mt-4">
+      <div className="pt-4 mt-4 border-t border-slate-700 shrink-0">
 
         <button
           type="button"
@@ -276,10 +268,10 @@ export default function Sidebar() {
           FOOTER
       ================================================= */}
 
-      <div className="mt-auto pt-6 border-t border-slate-700">
+      <div className="pt-6 mt-4 border-t border-slate-700 shrink-0">
 
         <p className="text-xs text-slate-500">
-          Issue Management System
+          Helpdesk System
         </p>
 
         <p className="text-xs text-slate-600 mt-1">

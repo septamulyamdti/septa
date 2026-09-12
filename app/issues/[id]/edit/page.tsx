@@ -9,6 +9,7 @@ type Issue = {
   issue_code: string;
   title: string;
   description: string | null;
+  project: string | null;
   category: string;
   priority: string;
   location: string;
@@ -39,12 +40,14 @@ export default function EditIssuePage() {
   const issueId = params.id as string;
 
   const [issue, setIssue] = useState<Issue | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    project: "",
     category: "",
     priority: "Medium",
     location: "",
@@ -72,7 +75,10 @@ export default function EditIssuePage() {
         .single();
 
       if (error) {
-        console.error("Get issue error:", error.message);
+        console.error(
+          "Get issue error:",
+          error.message
+        );
 
         setIssue(null);
         setLoading(false);
@@ -89,6 +95,7 @@ export default function EditIssuePage() {
       setFormData({
         title: data.title || "",
         description: data.description || "",
+        project: data.project || "",
         category: data.category || "",
         priority: data.priority || "Medium",
         location: data.location || "",
@@ -109,7 +116,9 @@ export default function EditIssuePage() {
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      HTMLInputElement |
+      HTMLTextAreaElement |
+      HTMLSelectElement
     >
   ) => {
     const { name, value } = e.target;
@@ -124,7 +133,9 @@ export default function EditIssuePage() {
   // UPDATE ISSUE
   // =====================================================
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
     if (!issue) {
@@ -143,8 +154,18 @@ export default function EditIssuePage() {
       changes.push("Title");
     }
 
-    if ((issue.description || "") !== formData.description) {
+    if (
+      (issue.description || "") !==
+      formData.description
+    ) {
       changes.push("Description");
+    }
+
+    if (
+      (issue.project || "") !==
+      formData.project
+    ) {
+      changes.push("Project");
     }
 
     if (issue.category !== formData.category) {
@@ -163,11 +184,17 @@ export default function EditIssuePage() {
       changes.push("Status");
     }
 
-    if ((issue.assignee || "") !== formData.assignee) {
+    if (
+      (issue.assignee || "") !==
+      formData.assignee
+    ) {
       changes.push("Assignee");
     }
 
-    if ((issue.resolution || "") !== formData.resolution) {
+    if (
+      (issue.resolution || "") !==
+      formData.resolution
+    ) {
       changes.push("Resolution");
     }
 
@@ -178,7 +205,9 @@ export default function EditIssuePage() {
     if (changes.length === 0) {
       setSaving(false);
 
-      alert("Tidak ada perubahan yang dilakukan.");
+      alert(
+        "Tidak ada perubahan yang dilakukan."
+      );
 
       return;
     }
@@ -225,7 +254,7 @@ export default function EditIssuePage() {
 
     // ===================================================
     // OTHER CHANGES
-    // =====================================================
+    // ===================================================
 
     const otherChanges: string[] = [];
 
@@ -233,8 +262,18 @@ export default function EditIssuePage() {
       otherChanges.push("Title");
     }
 
-    if ((issue.description || "") !== formData.description) {
+    if (
+      (issue.description || "") !==
+      formData.description
+    ) {
       otherChanges.push("Description");
+    }
+
+    if (
+      (issue.project || "") !==
+      formData.project
+    ) {
+      otherChanges.push("Project");
     }
 
     if (issue.category !== formData.category) {
@@ -245,11 +284,17 @@ export default function EditIssuePage() {
       otherChanges.push("Location");
     }
 
-    if ((issue.assignee || "") !== formData.assignee) {
+    if (
+      (issue.assignee || "") !==
+      formData.assignee
+    ) {
       otherChanges.push("Assignee");
     }
 
-    if ((issue.resolution || "") !== formData.resolution) {
+    if (
+      (issue.resolution || "") !==
+      formData.resolution
+    ) {
       otherChanges.push("Resolution");
     }
 
@@ -270,29 +315,35 @@ export default function EditIssuePage() {
     // UPDATE ISSUE
     // ===================================================
 
-    const { data: updatedIssue, error: updateError } =
-      await supabase
-        .from("issues")
-        .update({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          priority: formData.priority,
-          location: formData.location,
-          status: formData.status,
-          assignee: formData.assignee || null,
-          resolution: formData.resolution || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", issue.id)
-        .select()
-        .single();
+    const {
+      data: updatedIssue,
+      error: updateError,
+    } = await supabase
+      .from("issues")
+      .update({
+        title: formData.title,
+        description: formData.description,
+        project: formData.project || null,
+        category: formData.category,
+        priority: formData.priority,
+        location: formData.location,
+        status: formData.status,
+        assignee: formData.assignee || null,
+        resolution: formData.resolution || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", issue.id)
+      .select()
+      .single();
 
     if (updateError) {
-      console.error("Update issue error:", {
-        code: updateError.code,
-        message: updateError.message,
-      });
+      console.error(
+        "Update issue error:",
+        {
+          code: updateError.code,
+          message: updateError.message,
+        }
+      );
 
       setSaving(false);
 
@@ -317,10 +368,13 @@ export default function EditIssuePage() {
         .select();
 
       if (historyError) {
-        console.error("Create history error:", {
-          code: historyError.code,
-          message: historyError.message,
-        });
+        console.error(
+          "Create history error:",
+          {
+            code: historyError.code,
+            message: historyError.message,
+          }
+        );
 
         setSaving(false);
 
@@ -377,6 +431,7 @@ export default function EditIssuePage() {
     return (
       <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
         <div className="bg-white rounded-xl shadow p-8 text-center">
+
           <h1 className="text-xl font-bold text-slate-800">
             Issue tidak ditemukan
           </h1>
@@ -391,6 +446,7 @@ export default function EditIssuePage() {
           >
             ← Kembali ke Issues
           </Link>
+
         </div>
       </main>
     );
@@ -408,6 +464,7 @@ export default function EditIssuePage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
 
         <div>
+
           <p className="text-sm text-slate-500 mb-1">
             Issue Management
           </p>
@@ -419,6 +476,7 @@ export default function EditIssuePage() {
           <p className="text-sm text-slate-500 mt-1">
             {issue.issue_code}
           </p>
+
         </div>
 
         <Link
@@ -440,6 +498,7 @@ export default function EditIssuePage() {
         {/* ISSUE CODE */}
 
         <div>
+
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Issue Code
           </label>
@@ -454,11 +513,61 @@ export default function EditIssuePage() {
           <p className="text-xs text-slate-500 mt-1">
             Issue Code tidak dapat diubah.
           </p>
+
+        </div>
+
+        {/* PROJECT */}
+
+        <div>
+
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Project
+          </label>
+
+          <select
+            name="project"
+            value={formData.project}
+            onChange={handleChange}
+            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            required
+          >
+
+            <option value="">
+              Select Project
+            </option>
+
+            <option value="TAM">
+              TAM
+            </option>
+
+            <option value="BPKB">
+              BPKB
+            </option>
+
+            <option value="STNK">
+              STNK
+            </option>
+
+            <option value="Mahindra">
+              Mahindra
+            </option>
+
+            <option value="Hyundai">
+              Hyundai
+            </option>
+
+            <option value="LMS">
+              LMS
+            </option>
+
+          </select>
+
         </div>
 
         {/* TITLE */}
 
         <div>
+
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Issue Title
           </label>
@@ -472,11 +581,13 @@ export default function EditIssuePage() {
             className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           />
+
         </div>
 
         {/* DESCRIPTION */}
 
         <div>
+
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Description
           </label>
@@ -490,6 +601,7 @@ export default function EditIssuePage() {
             className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           />
+
         </div>
 
         {/* CATEGORY & PRIORITY */}
@@ -499,6 +611,7 @@ export default function EditIssuePage() {
           {/* CATEGORY */}
 
           <div>
+
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Category
             </label>
@@ -510,6 +623,7 @@ export default function EditIssuePage() {
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
+
               <option value="">
                 Select Category
               </option>
@@ -537,12 +651,15 @@ export default function EditIssuePage() {
               <option value="Other">
                 Other
               </option>
+
             </select>
+
           </div>
 
           {/* PRIORITY */}
 
           <div>
+
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Priority
             </label>
@@ -554,6 +671,7 @@ export default function EditIssuePage() {
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
+
               <option value="Low">
                 Low
               </option>
@@ -569,7 +687,9 @@ export default function EditIssuePage() {
               <option value="Critical">
                 Critical
               </option>
+
             </select>
+
           </div>
 
         </div>
@@ -581,6 +701,7 @@ export default function EditIssuePage() {
           {/* LOCATION */}
 
           <div>
+
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Location
             </label>
@@ -592,6 +713,7 @@ export default function EditIssuePage() {
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
+
               <option value="">
                 Select Location
               </option>
@@ -619,12 +741,15 @@ export default function EditIssuePage() {
               <option value="BPKB Banjarbaru">
                 BPKB Banjarbaru
               </option>
+
             </select>
+
           </div>
 
           {/* ASSIGNEE */}
 
           <div>
+
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Assignee
             </label>
@@ -636,6 +761,7 @@ export default function EditIssuePage() {
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
+
               <option value="">
                 Select Assignee
               </option>
@@ -663,7 +789,9 @@ export default function EditIssuePage() {
               <option value="Pak Bona">
                 Pak Bona
               </option>
+
             </select>
+
           </div>
 
         </div>
@@ -671,6 +799,7 @@ export default function EditIssuePage() {
         {/* STATUS */}
 
         <div>
+
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Status
           </label>
@@ -682,6 +811,7 @@ export default function EditIssuePage() {
             className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           >
+
             <option value="Open">
               Open
             </option>
@@ -697,12 +827,15 @@ export default function EditIssuePage() {
             <option value="Closed">
               Closed
             </option>
+
           </select>
+
         </div>
 
         {/* RESOLUTION */}
 
         <div>
+
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Resolution
           </label>
@@ -719,11 +852,13 @@ export default function EditIssuePage() {
           <p className="text-xs text-slate-500 mt-1">
             Isi resolution jika issue sudah ditangani atau diselesaikan.
           </p>
+
         </div>
 
         {/* REPORTER */}
 
         <div>
+
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Reporter
           </label>
@@ -738,6 +873,7 @@ export default function EditIssuePage() {
           <p className="text-xs text-slate-500 mt-1">
             Reporter tidak dapat diubah.
           </p>
+
         </div>
 
         {/* BUTTONS */}
@@ -756,7 +892,9 @@ export default function EditIssuePage() {
             disabled={saving}
             className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium transition"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving
+              ? "Saving..."
+              : "Save Changes"}
           </button>
 
         </div>

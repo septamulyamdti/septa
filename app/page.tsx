@@ -405,7 +405,7 @@ export default function DashboardPage() {
 
         <div>
           <h1 className="text-3xl font-bold text-slate-800">
-            Issue Management Dashboard
+            Dashboard
           </h1>
 
           <p className="text-slate-500 mt-1">
@@ -417,7 +417,7 @@ export default function DashboardPage() {
 
           <Link
             href="/issues"
-            className="px-4 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-sm"
+            className="px-4 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-sm text-slate-700"
           >
             View All Issues
           </Link>

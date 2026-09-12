@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,7 @@ type Issue = {
   id: number;
   issue_code: string;
   title: string;
+  project?: string | null;
   category: string;
   priority: string;
   location: string;
@@ -34,6 +36,20 @@ export default function MyIssuesPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [locationFilter, setLocationFilter] = useState("All");
+  const [projectFilter, setProjectFilter] = useState("All");
+
+  // =====================================================
+  // PROJECT LIST
+  // =====================================================
+
+  const projects = [
+    "TAM",
+    "BPKB",
+    "STNK",
+    "Mahindra",
+    "Hyundai",
+    "LMS",
+  ];
 
   // =====================================================
   // GET LOGGED-IN USER
@@ -86,9 +102,7 @@ export default function MyIssuesPage() {
       if (error) {
         console.error("Get my issues error:", error);
 
-        alert(
-          `Gagal mengambil My Issues: ${error.message}`
-        );
+        alert(`Gagal mengambil My Issues: ${error.message}`);
 
         setIssues([]);
       } else {
@@ -148,6 +162,35 @@ export default function MyIssuesPage() {
   };
 
   // =====================================================
+  // PROJECT STYLE
+  // =====================================================
+
+  const getProjectClass = (project?: string | null) => {
+    switch (project) {
+      case "TAM":
+        return "bg-blue-100 text-blue-700";
+
+      case "BPKB":
+        return "bg-purple-100 text-purple-700";
+
+      case "STNK":
+        return "bg-indigo-100 text-indigo-700";
+
+      case "Mahindra":
+        return "bg-orange-100 text-orange-700";
+
+      case "Hyundai":
+        return "bg-green-100 text-green-700";
+
+      case "LMS":
+        return "bg-pink-100 text-pink-700";
+
+      default:
+        return "bg-slate-100 text-slate-600";
+    }
+  };
+
+  // =====================================================
   // FORMAT DATE
   // =====================================================
 
@@ -156,14 +199,11 @@ export default function MyIssuesPage() {
       return "-";
     }
 
-    return new Date(date).toLocaleDateString(
-      "id-ID",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }
-    );
+    return new Date(date).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   // =====================================================
@@ -187,9 +227,7 @@ export default function MyIssuesPage() {
   // =====================================================
 
   const filteredIssues = issues.filter((issue) => {
-    const searchValue = search
-      .toLowerCase()
-      .trim();
+    const searchValue = search.toLowerCase().trim();
 
     const searchMatch =
       searchValue === "" ||
@@ -212,11 +250,16 @@ export default function MyIssuesPage() {
       locationFilter === "All" ||
       issue.location === locationFilter;
 
+    const projectMatch =
+      projectFilter === "All" ||
+      issue.project === projectFilter;
+
     return (
       searchMatch &&
       statusMatch &&
       priorityMatch &&
-      locationMatch
+      locationMatch &&
+      projectMatch
     );
   });
 
@@ -229,6 +272,7 @@ export default function MyIssuesPage() {
     setStatusFilter("All");
     setPriorityFilter("All");
     setLocationFilter("All");
+    setProjectFilter("All");
   };
 
   // =====================================================
@@ -303,7 +347,7 @@ export default function MyIssuesPage() {
 
       <div className="bg-white rounded-xl shadow mb-6 p-4 sm:p-5">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
           {/* SEARCH */}
 
@@ -315,12 +359,37 @@ export default function MyIssuesPage() {
             <input
               type="text"
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Issue code atau judul..."
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
+          </div>
+
+          {/* PROJECT */}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              Project
+            </label>
+
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="All">
+                All Project
+              </option>
+
+              {projects.map((project) => (
+                <option
+                  key={project}
+                  value={project}
+                >
+                  {project}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* STATUS */}
@@ -332,9 +401,7 @@ export default function MyIssuesPage() {
 
             <select
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value)
-              }
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="All">
@@ -368,9 +435,7 @@ export default function MyIssuesPage() {
 
             <select
               value={priorityFilter}
-              onChange={(e) =>
-                setPriorityFilter(e.target.value)
-              }
+              onChange={(e) => setPriorityFilter(e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="All">
@@ -404,9 +469,7 @@ export default function MyIssuesPage() {
 
             <select
               value={locationFilter}
-              onChange={(e) =>
-                setLocationFilter(e.target.value)
-              }
+              onChange={(e) => setLocationFilter(e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="All">
@@ -509,7 +572,7 @@ export default function MyIssuesPage() {
                 DESKTOP HEADER
             ================================================= */}
 
-            <div className="hidden lg:grid grid-cols-[1.4fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 px-6 py-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+            <div className="hidden lg:grid grid-cols-[1.35fr_1fr_1.1fr_1.2fr_1.1fr_1fr_150px] gap-4 px-6 py-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
 
               <div>
                 Issue Code
@@ -517,6 +580,10 @@ export default function MyIssuesPage() {
 
               <div>
                 Date
+              </div>
+
+              <div>
+                Project
               </div>
 
               <div>
@@ -552,7 +619,9 @@ export default function MyIssuesPage() {
                     DESKTOP
                 ================================================= */}
 
-                <div className="hidden lg:grid grid-cols-[1.4fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+                <div className="hidden lg:grid grid-cols-[1.35fr_1fr_1.1fr_1.2fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+
+                  {/* ISSUE CODE */}
 
                   <div className="min-w-0">
 
@@ -569,6 +638,8 @@ export default function MyIssuesPage() {
 
                   </div>
 
+                  {/* DATE */}
+
                   <div>
 
                     <p className="text-sm text-slate-600 whitespace-nowrap">
@@ -576,6 +647,22 @@ export default function MyIssuesPage() {
                     </p>
 
                   </div>
+
+                  {/* PROJECT */}
+
+                  <div>
+
+                    <span
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getProjectClass(
+                        issue.project
+                      )}`}
+                    >
+                      {issue.project || "-"}
+                    </span>
+
+                  </div>
+
+                  {/* LOCATION */}
 
                   <div className="min-w-0">
 
@@ -587,6 +674,8 @@ export default function MyIssuesPage() {
                     </p>
 
                   </div>
+
+                  {/* STATUS */}
 
                   <div>
 
@@ -600,6 +689,8 @@ export default function MyIssuesPage() {
 
                   </div>
 
+                  {/* PRIORITY */}
+
                   <div>
 
                     <span
@@ -611,6 +702,8 @@ export default function MyIssuesPage() {
                     </span>
 
                   </div>
+
+                  {/* ACTION */}
 
                   <div className="flex justify-end gap-2">
 
@@ -657,9 +750,23 @@ export default function MyIssuesPage() {
                         {formatDate(issue.created_at)}
                       </span>
 
+                      {/* PROJECT */}
+
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
+                          issue.project
+                        )}`}
+                      >
+                        {issue.project || "-"}
+                      </span>
+
+                      {/* LOCATION */}
+
                       <span className="text-xs text-slate-500 truncate max-w-[180px]">
                         {issue.location || "-"}
                       </span>
+
+                      {/* STATUS */}
 
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
@@ -668,6 +775,8 @@ export default function MyIssuesPage() {
                       >
                         {issue.status}
                       </span>
+
+                      {/* PRIORITY */}
 
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
@@ -738,9 +847,22 @@ export default function MyIssuesPage() {
 
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 mt-3">
+                  {/* PROJECT + LOCATION */}
 
-                    <p className="text-sm text-slate-600 truncate">
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
+                        issue.project
+                      )}`}
+                    >
+                      {issue.project || "-"}
+                    </span>
+
+                    <p
+                      className="text-sm text-slate-600 truncate flex-1 min-w-0"
+                      title={issue.location}
+                    >
                       {issue.location || "-"}
                     </p>
 
@@ -753,6 +875,8 @@ export default function MyIssuesPage() {
                     </span>
 
                   </div>
+
+                  {/* ACTION */}
 
                   <div className="flex gap-2 mt-4">
 

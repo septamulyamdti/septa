@@ -12,7 +12,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (
+    e: FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
 
     setErrorMessage("");
@@ -28,16 +30,20 @@ export default function LoginPage() {
 
     const supabase = createClient();
 
-    const { error } =
+    // ==========================================
+    // LOGIN
+    // ==========================================
+
+    const { data, error } =
       await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-    setLoading(false);
-
     if (error) {
       console.error("Login error:", error);
+
+      setLoading(false);
 
       setErrorMessage(
         "Email atau password salah. Silakan periksa kembali."
@@ -46,18 +52,76 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/");
+    // ==========================================
+    // USER BERHASIL LOGIN
+    // ==========================================
+
+    if (!data.user) {
+      setLoading(false);
+
+      setErrorMessage(
+        "Login berhasil tetapi data user tidak ditemukan."
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // AMBIL ROLE USER
+    // ==========================================
+
+    const { data: profile, error: profileError } =
+      await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", data.user.id)
+        .single();
+
+    if (profileError || !profile) {
+      console.error(
+        "Gagal mengambil role user:",
+        profileError
+      );
+
+      await supabase.auth.signOut();
+
+      setLoading(false);
+
+      setErrorMessage(
+        "Profil user tidak ditemukan. Silakan hubungi administrator."
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // REDIRECT BERDASARKAN ROLE
+    // ==========================================
+
+    if (profile.role === "admin") {
+      router.replace("/");
+    } else if (profile.role === "user") {
+      router.replace("/issues/create");
+    } else {
+      await supabase.auth.signOut();
+
+      setLoading(false);
+
+      setErrorMessage(
+        "Role user tidak dikenali. Silakan hubungi administrator."
+      );
+
+      return;
+    }
+
     router.refresh();
   };
 
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
-
       <div className="w-full max-w-md">
 
-        {/* =================================================
-            LOGIN CARD
-        ================================================= */}
+        {/* LOGIN CARD */}
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
 
@@ -66,11 +130,9 @@ export default function LoginPage() {
           <div className="text-center mb-8">
 
             <div className="mx-auto w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mb-4 shadow-md">
-
               <span className="text-white text-2xl font-bold">
                 IM
               </span>
-
             </div>
 
             <h1 className="text-3xl font-bold text-slate-800">
@@ -87,11 +149,9 @@ export default function LoginPage() {
 
           {errorMessage && (
             <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-
               <p className="text-sm text-red-700">
                 {errorMessage}
               </p>
-
             </div>
           )}
 
@@ -183,7 +243,6 @@ export default function LoginPage() {
         </div>
 
       </div>
-
     </main>
   );
 }

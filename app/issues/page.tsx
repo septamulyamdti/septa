@@ -1,5 +1,4 @@
 "use client";
-
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -9,6 +8,7 @@ type Issue = {
   id: number;
   issue_code: string;
   title: string;
+  project: string;
   category: string;
   priority: string;
   location: string;
@@ -34,6 +34,7 @@ function IssuesPageContent() {
   );
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [locationFilter, setLocationFilter] = useState("All");
+  const [projectFilter, setProjectFilter] = useState("All");
 
   // =====================================================
   // GET ISSUES
@@ -130,6 +131,35 @@ function IssuesPageContent() {
   };
 
   // =====================================================
+  // PROJECT STYLE
+  // =====================================================
+
+  const getProjectClass = (project: string) => {
+    switch (project) {
+      case "TAM":
+        return "bg-blue-100 text-blue-700";
+
+      case "BPKB":
+        return "bg-purple-100 text-purple-700";
+
+      case "STNK":
+        return "bg-green-100 text-green-700";
+
+      case "Mahindra":
+        return "bg-orange-100 text-orange-700";
+
+      case "Hyundai":
+        return "bg-red-100 text-red-700";
+
+      case "LMS":
+        return "bg-cyan-100 text-cyan-700";
+
+      default:
+        return "bg-slate-100 text-slate-600";
+    }
+  };
+
+  // =====================================================
   // FORMAT DATE
   // =====================================================
 
@@ -165,6 +195,22 @@ function IssuesPageContent() {
   }, [issues]);
 
   // =====================================================
+  // PROJECT LIST
+  // =====================================================
+
+  const projects = useMemo(() => {
+    const uniqueProjects = Array.from(
+      new Set(
+        issues
+          .map((issue) => issue.project)
+          .filter(Boolean)
+      )
+    );
+
+    return uniqueProjects.sort();
+  }, [issues]);
+
+  // =====================================================
   // FILTER LIST
   // =====================================================
 
@@ -191,11 +237,16 @@ function IssuesPageContent() {
       locationFilter === "All" ||
       issue.location === locationFilter;
 
+    const projectMatch =
+      projectFilter === "All" ||
+      issue.project === projectFilter;
+
     return (
       searchMatch &&
       statusMatch &&
       priorityMatch &&
-      locationMatch
+      locationMatch &&
+      projectMatch
     );
   });
 
@@ -208,6 +259,7 @@ function IssuesPageContent() {
     setStatusFilter("All");
     setPriorityFilter("All");
     setLocationFilter("All");
+    setProjectFilter("All");
 
     window.history.replaceState(
       null,
@@ -239,9 +291,7 @@ function IssuesPageContent() {
   return (
     <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      {/* HEADER */}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 
@@ -268,9 +318,7 @@ function IssuesPageContent() {
 
       </div>
 
-      {/* =================================================
-          ACTIVE STATUS FROM DASHBOARD
-      ================================================= */}
+      {/* ACTIVE STATUS FROM DASHBOARD */}
 
       {statusFromUrl && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -296,13 +344,11 @@ function IssuesPageContent() {
         </div>
       )}
 
-      {/* =================================================
-          FILTER
-      ================================================= */}
+      {/* FILTER */}
 
       <div className="bg-white rounded-xl shadow mb-6 p-4 sm:p-5">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
           {/* SEARCH */}
 
@@ -320,6 +366,36 @@ function IssuesPageContent() {
               placeholder="Contoh: ISS-0001"
               className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
+          </div>
+
+          {/* PROJECT */}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-600 mb-2">
+              Project
+            </label>
+
+            <select
+              value={projectFilter}
+              onChange={(e) =>
+                setProjectFilter(e.target.value)
+              }
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="All">
+                All Project
+              </option>
+
+              {projects.map((project) => (
+                <option
+                  key={project}
+                  value={project}
+                >
+                  {project}
+                </option>
+              ))}
+
+            </select>
           </div>
 
           {/* STATUS */}
@@ -375,6 +451,7 @@ function IssuesPageContent() {
               <option value="Closed">
                 Closed
               </option>
+
             </select>
           </div>
 
@@ -411,6 +488,7 @@ function IssuesPageContent() {
               <option value="Low">
                 Low
               </option>
+
             </select>
           </div>
 
@@ -440,6 +518,7 @@ function IssuesPageContent() {
                   {location}
                 </option>
               ))}
+
             </select>
           </div>
 
@@ -461,9 +540,7 @@ function IssuesPageContent() {
 
       </div>
 
-      {/* =================================================
-          ISSUE LIST
-      ================================================= */}
+      {/* ISSUE LIST */}
 
       <div className="bg-white rounded-xl shadow overflow-hidden">
 
@@ -479,9 +556,7 @@ function IssuesPageContent() {
 
         </div>
 
-        {/* =================================================
-            EMPTY
-        ================================================= */}
+        {/* EMPTY */}
 
         {filteredIssues.length === 0 ? (
 
@@ -517,7 +592,7 @@ function IssuesPageContent() {
                 DESKTOP HEADER
             ================================================= */}
 
-            <div className="hidden lg:grid grid-cols-[1.4fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 px-6 py-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+            <div className="hidden lg:grid grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 px-6 py-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
 
               <div>
                 Issue Code
@@ -525,6 +600,10 @@ function IssuesPageContent() {
 
               <div>
                 Date
+              </div>
+
+              <div>
+                Project
               </div>
 
               <div>
@@ -545,9 +624,7 @@ function IssuesPageContent() {
 
             </div>
 
-            {/* =================================================
-                ROWS
-            ================================================= */}
+            {/* ROWS */}
 
             {filteredIssues.map((issue) => (
 
@@ -560,7 +637,9 @@ function IssuesPageContent() {
                     DESKTOP
                 ================================================= */}
 
-                <div className="hidden lg:grid grid-cols-[1.4fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+                <div className="hidden lg:grid grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+
+                  {/* ISSUE CODE */}
 
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-800 truncate">
@@ -568,11 +647,27 @@ function IssuesPageContent() {
                     </p>
                   </div>
 
+                  {/* DATE */}
+
                   <div>
                     <p className="text-sm text-slate-600 whitespace-nowrap">
                       {formatDate(issue.created_at)}
                     </p>
                   </div>
+
+                  {/* PROJECT */}
+
+                  <div>
+                    <span
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getProjectClass(
+                        issue.project
+                      )}`}
+                    >
+                      {issue.project || "-"}
+                    </span>
+                  </div>
+
+                  {/* LOCATION */}
 
                   <div className="min-w-0">
                     <p
@@ -582,6 +677,8 @@ function IssuesPageContent() {
                       {issue.location || "-"}
                     </p>
                   </div>
+
+                  {/* STATUS */}
 
                   <div>
                     <span
@@ -593,6 +690,8 @@ function IssuesPageContent() {
                     </span>
                   </div>
 
+                  {/* PRIORITY */}
+
                   <div>
                     <span
                       className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPriorityClass(
@@ -602,6 +701,8 @@ function IssuesPageContent() {
                       {issue.priority}
                     </span>
                   </div>
+
+                  {/* ACTION */}
 
                   <div className="flex justify-end gap-2">
 
@@ -639,6 +740,10 @@ function IssuesPageContent() {
 
                       <span className="text-xs text-slate-500">
                         {formatDate(issue.created_at)}
+                      </span>
+
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                        {issue.project || "-"}
                       </span>
 
                       <span className="text-xs text-slate-500 truncate max-w-[180px]">
@@ -715,11 +820,23 @@ function IssuesPageContent() {
 
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 mt-3">
+                  <div className="mt-3 flex items-center justify-between gap-3">
 
-                    <p className="text-sm text-slate-600 truncate">
-                      {issue.location || "-"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
+                          issue.project
+                        )}`}
+                      >
+                        {issue.project || "-"}
+                      </span>
+
+                      <span className="text-sm text-slate-600 truncate">
+                        {issue.location || "-"}
+                      </span>
+
+                    </div>
 
                     <span
                       className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(

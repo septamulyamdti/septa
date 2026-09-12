@@ -9,6 +9,7 @@ type Issue = {
   issue_code: string;
   title: string;
   description: string | null;
+  project: string | null;
   category: string;
   priority: string;
   location: string;
@@ -116,7 +117,7 @@ export default function IssueDetailPage() {
   };
 
   // =====================================================
-  // GET ISSUE
+  // GET ISSUE + HISTORY
   // =====================================================
 
   const fetchIssue = useCallback(async () => {
@@ -132,11 +133,6 @@ export default function IssueDetailPage() {
     setLoading(true);
     setHistoryLoading(true);
     setHistoryError(null);
-
-    console.log("=================================");
-    console.log("GET ISSUE DETAIL");
-    console.log("URL PARAM ID:", issueId);
-    console.log("=================================");
 
     // ===================================================
     // GET ISSUE
@@ -164,19 +160,12 @@ export default function IssueDetailPage() {
       return;
     }
 
-    console.log("ISSUE DATA:", issueData);
-
     setIssue(issueData);
     setLoading(false);
 
     // ===================================================
     // GET HISTORY
     // ===================================================
-
-    console.log("=================================");
-    console.log("GET ISSUE HISTORY");
-    console.log("ISSUE ID:", issueData.id);
-    console.log("=================================");
 
     const {
       data: historyData,
@@ -205,14 +194,10 @@ export default function IssueDetailPage() {
     // ===================================================
 
     if (historyFetchError) {
-      console.error("=================================");
-      console.error("GET HISTORY ERROR");
-      console.error("=================================");
-
-      console.error("Code:", historyFetchError.code);
-      console.error("Message:", historyFetchError.message);
-      console.error("Details:", historyFetchError.details);
-      console.error("Hint:", historyFetchError.hint);
+      console.error(
+        "GET HISTORY ERROR:",
+        historyFetchError
+      );
 
       setHistory([]);
       setHistoryError(historyFetchError.message);
@@ -225,14 +210,6 @@ export default function IssueDetailPage() {
     // ===================================================
     // HISTORY SUCCESS
     // ===================================================
-
-    console.log("=================================");
-    console.log("GET HISTORY SUCCESS");
-    console.log("=================================");
-
-    console.log("Issue ID:", issueData.id);
-    console.log("History Count:", historyData?.length ?? 0);
-    console.log("History Data:", historyData);
 
     setHistory((historyData as History[]) || []);
     setHistoryError(null);
@@ -323,9 +300,7 @@ export default function IssueDetailPage() {
   return (
     <main className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      {/* HEADER */}
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
 
@@ -363,9 +338,7 @@ export default function IssueDetailPage() {
 
       </div>
 
-      {/* =================================================
-          WORKFLOW
-      ================================================= */}
+      {/* WORKFLOW */}
 
       <div className="bg-white rounded-xl shadow mb-6 p-6">
 
@@ -425,7 +398,7 @@ export default function IssueDetailPage() {
                   )}
 
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white shadow z-10 transition-all ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white shadow z-10 ${
                       isCompleted
                         ? "bg-green-500 text-white"
                         : isCurrent
@@ -468,9 +441,7 @@ export default function IssueDetailPage() {
 
       </div>
 
-      {/* =================================================
-          ISSUE INFORMATION
-      ================================================= */}
+      {/* ISSUE INFORMATION */}
 
       <div className="bg-white rounded-xl shadow mb-6">
 
@@ -484,6 +455,8 @@ export default function IssueDetailPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
+            {/* ISSUE CODE */}
+
             <div>
               <p className="text-sm text-slate-500">
                 Issue Code
@@ -493,6 +466,20 @@ export default function IssueDetailPage() {
                 {issue.issue_code}
               </p>
             </div>
+
+            {/* PROJECT */}
+
+            <div>
+              <p className="text-sm text-slate-500">
+                Project
+              </p>
+
+              <span className="inline-block mt-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
+                {issue.project || "-"}
+              </span>
+            </div>
+
+            {/* CATEGORY */}
 
             <div>
               <p className="text-sm text-slate-500">
@@ -504,6 +491,8 @@ export default function IssueDetailPage() {
               </p>
             </div>
 
+            {/* LOCATION */}
+
             <div>
               <p className="text-sm text-slate-500">
                 Location
@@ -513,6 +502,8 @@ export default function IssueDetailPage() {
                 {issue.location || "-"}
               </p>
             </div>
+
+            {/* ASSIGNEE */}
 
             <div>
               <p className="text-sm text-slate-500">
@@ -524,6 +515,8 @@ export default function IssueDetailPage() {
               </p>
             </div>
 
+            {/* REPORTER */}
+
             <div>
               <p className="text-sm text-slate-500">
                 Reporter
@@ -533,6 +526,8 @@ export default function IssueDetailPage() {
                 {issue.reporter || "-"}
               </p>
             </div>
+
+            {/* PRIORITY */}
 
             <div>
               <p className="text-sm text-slate-500">
@@ -548,6 +543,8 @@ export default function IssueDetailPage() {
               </span>
             </div>
 
+            {/* CREATED */}
+
             <div>
               <p className="text-sm text-slate-500">
                 Created
@@ -557,6 +554,8 @@ export default function IssueDetailPage() {
                 {formatDate(issue.created_at)}
               </p>
             </div>
+
+            {/* UPDATED */}
 
             <div>
               <p className="text-sm text-slate-500">
@@ -574,9 +573,7 @@ export default function IssueDetailPage() {
 
       </div>
 
-      {/* =================================================
-          DESCRIPTION
-      ================================================= */}
+      {/* DESCRIPTION */}
 
       <div className="bg-white rounded-xl shadow mb-6">
 
@@ -602,9 +599,7 @@ export default function IssueDetailPage() {
 
       </div>
 
-      {/* =================================================
-          RESOLUTION
-      ================================================= */}
+      {/* RESOLUTION */}
 
       <div className="bg-white rounded-xl shadow mb-6">
 
@@ -644,9 +639,7 @@ export default function IssueDetailPage() {
 
       </div>
 
-      {/* =================================================
-          HISTORY
-      ================================================= */}
+      {/* HISTORY */}
 
       <div className="bg-white rounded-xl shadow">
 
@@ -689,16 +682,12 @@ export default function IssueDetailPage() {
 
         <div className="p-6">
 
-          {/* HISTORY LOADING */}
-
           {historyLoading ? (
 
             <div className="text-center py-8">
-
               <p className="text-slate-400">
                 Loading history...
               </p>
-
             </div>
 
           ) : historyError ? (
@@ -747,8 +736,6 @@ export default function IssueDetailPage() {
                   key={item.id}
                   className="border border-slate-200 rounded-xl p-5 hover:shadow-sm transition"
                 >
-
-                  {/* HISTORY HEADER */}
 
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
 

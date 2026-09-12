@@ -4,26 +4,96 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+// =====================================================
+// PROJECT & LOCATION MAPPING
+// =====================================================
+
+const PROJECT_LOCATIONS: Record<string, string[]> = {
+  TAM: [
+    "NVDC Karawang",
+    "NVDC Sunter",
+    "NVDC Cibitung",
+  ],
+
+  BPKB: [
+    "Kepri",
+    "Riau",
+    "Sulut",
+    "Sulteng",
+    "Sulsel",
+    "Sultra",
+    "Bulukumba",
+    "Kalteng",
+    "Kalsel",
+    "Sumenep",
+    "Jogja",
+  ],
+
+  STNK: [
+    "Lampung",
+    "Jabar",
+  ],
+
+  LMS: [
+    "BACY",
+  ],
+
+  Hyundai: [
+    "Hyundai Cikarang",
+  ],
+
+  Mahindra: [
+    "Mahindra Cikarang",
+  ],
+};
+
+const PROJECTS = [
+  "TAM",
+  "BPKB",
+  "STNK",
+  "LMS",
+  "Hyundai",
+  "Mahindra",
+];
+
+// =====================================================
+// TYPES
+// =====================================================
+
+type Role = "admin" | "user";
+
 export default function CreateIssuePage() {
   const router = useRouter();
   const supabase = createClient();
+
+  // =====================================================
+  // FORM DATA
+  // =====================================================
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
     priority: "Medium",
+    project: "",
     location: "",
     status: "Open",
     assignee: "",
   });
 
+  // =====================================================
+  // USER INFO
+  // =====================================================
+
   const [userEmail, setUserEmail] = useState("");
+  const [userRole, setUserRole] = useState<Role | null>(null);
+  const [userProject, setUserProject] = useState("");
+
   const [loadingUser, setLoadingUser] = useState(true);
   const [loading, setLoading] = useState(false);
 
   // =====================================================
-  // GET LOGGED-IN USER
+  // GET LOGGED-IN USER + PROFILE
   // =====================================================
 
   useEffect(() => {
@@ -38,11 +108,67 @@ export default function CreateIssuePage() {
       }
 
       setUserEmail(user.email || "");
+
+      // =====================================================
+      // GET USER PROFILE
+      // =====================================================
+
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("user_profiles")
+          .select("role, project")
+          .eq("id", user.id)
+          .single();
+
+      if (profileError || !profile) {
+        console.error(
+          "Gagal mengambil user profile:",
+          profileError
+        );
+
+        alert(
+          "Data profile user tidak ditemukan. Silakan hubungi administrator."
+        );
+
+        setLoadingUser(false);
+        return;
+      }
+
+      const role = profile.role as Role;
+      const project = profile.project || "";
+
+      setUserRole(role);
+      setUserProject(project);
+
+      // =====================================================
+      // USER
+      // Project otomatis dari user_profiles
+      // =====================================================
+
+      if (role === "user") {
+        setFormData((prev) => ({
+          ...prev,
+          project,
+          location: "",
+          assignee: "",
+        }));
+      }
+
       setLoadingUser(false);
     };
 
     getUser();
-  }, [router]);
+  }, [router, supabase]);
+
+  // =====================================================
+  // GET AVAILABLE LOCATIONS
+  // =====================================================
+
+  const availableLocations =
+    formData.project &&
+    PROJECT_LOCATIONS[formData.project]
+      ? PROJECT_LOCATIONS[formData.project]
+      : [];
 
   // =====================================================
   // HANDLE CHANGE
@@ -55,6 +181,22 @@ export default function CreateIssuePage() {
   ) => {
     const { name, value } = e.target;
 
+    // =====================================================
+    // PROJECT CHANGE
+    // Hanya admin yang bisa mengubah project
+    // Location harus di-reset ketika project berubah
+    // =====================================================
+
+    if (name === "project") {
+      setFormData((prev) => ({
+        ...prev,
+        project: value,
+        location: "",
+      }));
+
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -65,17 +207,78 @@ export default function CreateIssuePage() {
   // HANDLE SUBMIT
   // =====================================================
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent
+  ) => {
     e.preventDefault();
 
+    // =====================================================
+    // VALIDASI USER
+    // =====================================================
+
     if (!userEmail) {
-      alert("Session login tidak ditemukan. Silakan login kembali.");
+      alert(
+        "Session login tidak ditemukan. Silakan login kembali."
+      );
+
       router.replace("/login");
       return;
     }
 
-    if (!formData.assignee) {
-      alert("Silakan pilih Assignee terlebih dahulu.");
+    // =====================================================
+    // VALIDASI PROJECT
+    // =====================================================
+
+    if (!formData.project) {
+      alert("Project belum ditentukan.");
+      return;
+    }
+
+    // =====================================================
+    // VALIDASI PROJECT USER
+    // =====================================================
+
+    if (
+      userRole === "user" &&
+      formData.project !== userProject
+    ) {
+      alert(
+        "Project tidak sesuai dengan project akun Anda."
+      );
+      return;
+    }
+
+    // =====================================================
+    // VALIDASI LOCATION
+    // =====================================================
+
+    if (!formData.location) {
+      alert("Silakan pilih Location terlebih dahulu.");
+      return;
+    }
+
+    if (
+      !PROJECT_LOCATIONS[formData.project]?.includes(
+        formData.location
+      )
+    ) {
+      alert(
+        "Location tidak sesuai dengan Project yang dipilih."
+      );
+      return;
+    }
+
+    // =====================================================
+    // VALIDASI ASSIGNEE ADMIN
+    // =====================================================
+
+    if (
+      userRole === "admin" &&
+      !formData.assignee
+    ) {
+      alert(
+        "Silakan pilih Assignee terlebih dahulu."
+      );
       return;
     }
 
@@ -90,7 +293,9 @@ export default function CreateIssuePage() {
       .slice(0, 10)
       .replace(/-/g, "");
 
-    const sequence = Date.now().toString().slice(-3);
+    const sequence = Date.now()
+      .toString()
+      .slice(-3);
 
     const issueCode = `ISS-${dateCode}-${sequence}`;
 
@@ -98,27 +303,38 @@ export default function CreateIssuePage() {
     // INSERT ISSUE
     // =====================================================
 
-    const { error } = await supabase.from("issues").insert([
-      {
-        issue_code: issueCode,
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        priority: formData.priority,
-        location: formData.location,
+    const { error } = await supabase
+      .from("issues")
+      .insert([
+        {
+          issue_code: issueCode,
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          priority: formData.priority,
 
-        // Status issue baru selalu Open
-        status: "Open",
+          // Project otomatis / pilihan admin
+          project: formData.project,
 
-        // Assignee dipilih dari form
-        assignee: formData.assignee,
+          // Location sesuai project
+          location: formData.location,
 
-        // Reporter otomatis dari user yang login
-        reporter: userEmail,
+          // Issue baru selalu Open
+          status: "Open",
 
-        resolution: null,
-      },
-    ]);
+          // Admin bisa pilih Assignee
+          // User otomatis NULL
+          assignee:
+            userRole === "admin"
+              ? formData.assignee
+              : null,
+
+          // Reporter otomatis dari akun login
+          reporter: userEmail,
+
+          resolution: null,
+        },
+      ]);
 
     setLoading(false);
 
@@ -127,9 +343,14 @@ export default function CreateIssuePage() {
     // =====================================================
 
     if (error) {
-      console.error("Supabase error:", error);
+      console.error(
+        "Supabase error:",
+        error
+      );
 
-      alert(`Gagal membuat issue: ${error.message}`);
+      alert(
+        `Gagal membuat issue: ${error.message}`
+      );
 
       return;
     }
@@ -139,21 +360,31 @@ export default function CreateIssuePage() {
     // =====================================================
 
     alert(
-      `Issue berhasil dibuat!\n\nIssue Code: ${issueCode}\nReporter: ${userEmail}`
+      `Issue berhasil dibuat!\n\nIssue Code: ${issueCode}\nProject: ${formData.project}\nLocation: ${formData.location}\nReporter: ${userEmail}`
     );
 
-    // Reset form
+    // =====================================================
+    // RESET FORM
+    // =====================================================
+
     setFormData({
       title: "",
       description: "",
       category: "",
       priority: "Medium",
+      project:
+        userRole === "user"
+          ? userProject
+          : "",
       location: "",
       status: "Open",
       assignee: "",
     });
 
-    // Kembali ke All Issues
+    // =====================================================
+    // KEMBALI KE ALL ISSUES
+    // =====================================================
+
     router.push("/issues");
   };
 
@@ -166,6 +397,56 @@ export default function CreateIssuePage() {
       <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
         <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
           Loading user...
+        </div>
+      </main>
+    );
+  }
+
+  // =====================================================
+  // PROFILE ERROR
+  // =====================================================
+
+  if (!userRole) {
+    return (
+      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+        <div className="bg-white rounded-xl shadow p-8 text-center">
+          <p className="text-red-600 font-medium">
+            Data profile user tidak ditemukan.
+          </p>
+
+          <p className="text-sm text-slate-500 mt-2">
+            Silakan hubungi administrator.
+          </p>
+
+          <Link
+            href="/login"
+            className="inline-block mt-5 px-5 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Kembali ke Login
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // =====================================================
+  // USER BELUM MEMILIKI PROJECT
+  // =====================================================
+
+  if (
+    userRole === "user" &&
+    !userProject
+  ) {
+    return (
+      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+        <div className="bg-white rounded-xl shadow p-8 text-center">
+          <p className="text-red-600 font-medium">
+            Project akun belum ditentukan.
+          </p>
+
+          <p className="text-sm text-slate-500 mt-2">
+            Silakan hubungi administrator untuk menentukan project akun Anda.
+          </p>
         </div>
       </main>
     );
@@ -198,12 +479,26 @@ export default function CreateIssuePage() {
           </p>
         </div>
 
-        <Link
-          href="/issues"
-          className="text-slate-600 hover:text-slate-900"
-        >
-          ← Back to Issues
-        </Link>
+        {userRole === "admin" ? (
+  <Link
+    href="/issues"
+    className="text-slate-600 hover:text-slate-900"
+  >
+    ← Back to Issues
+  </Link>
+) : (
+  <button
+    type="button"
+    onClick={async () => {
+      await supabase.auth.signOut();
+      router.replace("/login");
+      router.refresh();
+    }}
+    className="text-red-600 hover:text-red-700 font-medium"
+  >
+    Logout
+  </button>
+)}
 
       </div>
 
@@ -372,10 +667,58 @@ export default function CreateIssuePage() {
         </div>
 
         {/* =================================================
-            LOCATION & ASSIGNEE
+            PROJECT & LOCATION
         ================================================= */}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* PROJECT */}
+
+          <div>
+
+            <label className="block text-sm font-medium text-slate-800 mb-2">
+              Project
+            </label>
+
+            {userRole === "user" ? (
+              <>
+                <input
+                  type="text"
+                  value={formData.project}
+                  disabled
+                  className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-700 bg-slate-100"
+                />
+
+                <p className="text-xs text-slate-500 mt-1">
+                  Project otomatis berdasarkan project akun Anda.
+                </p>
+              </>
+            ) : (
+              <select
+                name="project"
+                value={formData.project}
+                onChange={handleChange}
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+
+                <option value="">
+                  Select Project
+                </option>
+
+                {PROJECTS.map((project) => (
+                  <option
+                    key={project}
+                    value={project}
+                  >
+                    {project}
+                  </option>
+                ))}
+
+              </select>
+            )}
+
+          </div>
 
           {/* LOCATION */}
 
@@ -389,44 +732,50 @@ export default function CreateIssuePage() {
               name="location"
               value={formData.location}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!formData.project}
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
               required
             >
 
               <option value="">
-                Select Location
+                {formData.project
+                  ? "Select Location"
+                  : "Select Project First"}
               </option>
 
-              <option value="NVDC Cibitung">
-                NVDC Cibitung
-              </option>
-
-              <option value="NVDC Sunter">
-                NVDC Sunter
-              </option>
-
-              <option value="NVDC Karawang">
-                NVDC Karawang
-              </option>
-
-              <option value="BPKB Makassar">
-                BPKB Makassar
-              </option>
-
-              <option value="BPKB Palangkaraya">
-                BPKB Palangkaraya
-              </option>
-
-              <option value="BPKB Banjarbaru">
-                BPKB Banjarbaru
-              </option>
+              {availableLocations.map(
+                (location) => (
+                  <option
+                    key={location}
+                    value={location}
+                  >
+                    {location}
+                  </option>
+                )
+              )}
 
             </select>
 
+            {formData.project && (
+              <p className="text-xs text-slate-500 mt-1">
+                Location hanya menampilkan lokasi yang sesuai dengan project{" "}
+                <span className="font-medium">
+                  {formData.project}
+                </span>
+                .
+              </p>
+            )}
+
           </div>
 
-          {/* ASSIGNEE */}
+        </div>
 
+        {/* =================================================
+            ASSIGNEE
+            HANYA ADMIN
+        ================================================= */}
+
+        {userRole === "admin" && (
           <div>
 
             <label className="block text-sm font-medium text-slate-800 mb-2">
@@ -472,8 +821,7 @@ export default function CreateIssuePage() {
             </select>
 
           </div>
-
-        </div>
+        )}
 
         {/* =================================================
             STATUS
@@ -522,7 +870,9 @@ export default function CreateIssuePage() {
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-3 rounded-lg transition font-medium"
           >
-            {loading ? "Creating..." : "Create Issue"}
+            {loading
+              ? "Creating..."
+              : "Create Issue"}
           </button>
 
         </div>

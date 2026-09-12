@@ -1,10 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request,
   });
+
+  // ==========================================
+  // SUPABASE SERVER CLIENT
+  // ==========================================
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,6 +43,10 @@ export async function proxy(request: NextRequest) {
     }
   );
 
+  // ==========================================
+  // CEK USER LOGIN
+  // ==========================================
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -74,26 +81,128 @@ export async function proxy(request: NextRequest) {
   }
 
   // ==========================================
-  // SUDAH LOGIN TAPI BUKA LOGIN
+  // JIKA BELUM LOGIN DAN MEMBUKA LOGIN
   // ==========================================
 
-  if (user && pathname === "/login") {
+  if (!user) {
+    return response;
+  }
+
+  // ==========================================
+  // AMBIL ROLE USER
+  // ==========================================
+
+  const { data: profile, error } =
+    await supabase
+      .from("user_profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+  // ==========================================
+  // PROFILE TIDAK DITEMUKAN
+  // ==========================================
+
+  if (error || !profile) {
+    console.error(
+      "User profile tidak ditemukan:",
+      error
+    );
+
+    await supabase.auth.signOut();
+
     return NextResponse.redirect(
-      new URL("/", request.url)
+      new URL("/login", request.url)
     );
   }
 
-  return response;
+  const role = profile.role;
+
+  // ==========================================
+  // SUDAH LOGIN TAPI MEMBUKA /LOGIN
+  // ==========================================
+
+  if (pathname === "/login") {
+    // ------------------------------------------
+    // ADMIN → DASHBOARD
+    // ------------------------------------------
+
+    if (role === "admin") {
+      return NextResponse.redirect(
+        new URL("/", request.url)
+      );
+    }
+
+    // ------------------------------------------
+    // USER → CREATE ISSUE
+    // ------------------------------------------
+
+    if (role === "user") {
+      return NextResponse.redirect(
+        new URL("/issues/create", request.url)
+      );
+    }
+
+    // ------------------------------------------
+    // ROLE TIDAK DIKENAL
+    // ------------------------------------------
+
+    await supabase.auth.signOut();
+
+    return NextResponse.redirect(
+      new URL("/login", request.url)
+    );
+  }
+
+  // ==========================================
+  // ROLE USER
+  // HANYA BOLEH AKSES CREATE ISSUE
+  // ==========================================
+
+  if (role === "user") {
+    const allowedUserRoute =
+      pathname === "/issues/create" ||
+      pathname.startsWith("/issues/create/");
+
+    if (allowedUserRoute) {
+      return response;
+    }
+
+    // Semua halaman lain diarahkan ke Create Issue
+    return NextResponse.redirect(
+      new URL(
+        "/issues/create",
+        request.url
+      )
+    );
+  }
+
+  // ==========================================
+  // ROLE ADMIN
+  // BOLEH AKSES SEMUA HALAMAN
+  // ==========================================
+
+  if (role === "admin") {
+    return response;
+  }
+
+  // ==========================================
+  // ROLE TIDAK DIKENAL
+  // ==========================================
+
+  await supabase.auth.signOut();
+
+  return NextResponse.redirect(
+    new URL("/login", request.url)
+  );
 }
+
+// ==========================================
+// MATCHER
+// ==========================================
 
 export const config = {
   matcher: [
-    /*
-     * Jalankan proxy pada semua route kecuali:
-     * - _next/static
-     * - _next/image
-     * - file metadata
-     */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
