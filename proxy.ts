@@ -1,6 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // ==========================================
+  // WHATSAPP WEBHOOK
+  // BYPASS LOGIN / SUPABASE AUTH
+  // ==========================================
+
+  if (pathname === "/api/whatsapp/webhook") {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request,
   });
@@ -19,25 +31,17 @@ export async function proxy(request: NextRequest) {
         },
 
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(
-            ({ name, value }) => {
-              request.cookies.set(name, value);
-            }
-          );
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
 
           response = NextResponse.next({
             request,
           });
 
-          cookiesToSet.forEach(
-            ({ name, value, options }) => {
-              response.cookies.set(
-                name,
-                value,
-                options
-              );
-            }
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
@@ -50,8 +54,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // ==========================================
   // PUBLIC ROUTES
@@ -67,15 +69,9 @@ export async function proxy(request: NextRequest) {
   // ==========================================
 
   if (!user && !isPublicRoute) {
-    const loginUrl = new URL(
-      "/login",
-      request.url
-    );
+    const loginUrl = new URL("/login", request.url);
 
-    loginUrl.searchParams.set(
-      "redirect",
-      pathname
-    );
+    loginUrl.searchParams.set("redirect", pathname);
 
     return NextResponse.redirect(loginUrl);
   }
@@ -92,12 +88,11 @@ export async function proxy(request: NextRequest) {
   // AMBIL ROLE USER
   // ==========================================
 
-  const { data: profile, error } =
-    await supabase
-      .from("user_profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+  const { data: profile, error } = await supabase
+    .from("user_profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
 
   // ==========================================
   // PROFILE TIDAK DITEMUKAN
@@ -123,30 +118,21 @@ export async function proxy(request: NextRequest) {
   // ==========================================
 
   if (pathname === "/login") {
-    // ------------------------------------------
     // ADMIN → DASHBOARD
-    // ------------------------------------------
-
     if (role === "admin") {
       return NextResponse.redirect(
         new URL("/", request.url)
       );
     }
 
-    // ------------------------------------------
     // USER → CREATE ISSUE
-    // ------------------------------------------
-
     if (role === "user") {
       return NextResponse.redirect(
         new URL("/issues/create", request.url)
       );
     }
 
-    // ------------------------------------------
     // ROLE TIDAK DIKENAL
-    // ------------------------------------------
-
     await supabase.auth.signOut();
 
     return NextResponse.redirect(
@@ -170,10 +156,7 @@ export async function proxy(request: NextRequest) {
 
     // Semua halaman lain diarahkan ke Create Issue
     return NextResponse.redirect(
-      new URL(
-        "/issues/create",
-        request.url
-      )
+      new URL("/issues/create", request.url)
     );
   }
 
