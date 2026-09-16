@@ -8,10 +8,43 @@ const supabaseServiceRoleKey =
 const verifyToken =
   process.env.WHATSAPP_VERIFY_TOKEN!;
 
+const whatsappAccessToken =
+  process.env.WHATSAPP_ACCESS_TOKEN!;
+
+const whatsappPhoneNumberId =
+  process.env.WHATSAPP_PHONE_NUMBER_ID!;
+
 const supabase = createClient(
   supabaseUrl,
   supabaseServiceRoleKey
 );
+
+/**
+ * =====================================================
+ * CONFIG
+ * =====================================================
+ */
+
+const PROJECTS = [
+  "TAM",
+  "BPKB",
+  "STNK",
+  "Mahindra",
+  "Hyundai",
+  "LMS",
+];
+
+const activeStatuses = [
+  "Open",
+  "On Progress",
+  "Resolved",
+];
+
+/**
+ * =====================================================
+ * TYPES
+ * =====================================================
+ */
 
 type WhatsAppMessage = {
   id?: string;
@@ -116,10 +149,6 @@ export async function POST(
       "================================="
     );
 
-    /**
-     * Pastikan event dari
-     * WhatsApp Business Account.
-     */
     if (
       body?.object !==
       "whatsapp_business_account"
@@ -169,11 +198,6 @@ export async function POST(
       }
     }
 
-    /**
-     * Meta membutuhkan response
-     * 200 agar event dianggap
-     * berhasil diterima.
-     */
     return NextResponse.json(
       {
         received: true,
@@ -188,12 +212,6 @@ export async function POST(
       error
     );
 
-    /**
-     * Tetap return 200 setelah
-     * event diterima untuk
-     * menghindari retry berulang
-     * saat debugging.
-     */
     return NextResponse.json(
       {
         received: true,
@@ -235,7 +253,7 @@ async function processIncomingMessage(
 
   /**
    * ===================================================
-   * 1. CEK DUPLIKAT PESAN
+   * 1. CEK DUPLIKAT
    * ===================================================
    */
   if (messageId) {
@@ -270,7 +288,7 @@ async function processIncomingMessage(
 
   /**
    * ===================================================
-   * 2. AMBIL NAMA CUSTOMER
+   * 2. NAMA CONTACT
    * ===================================================
    */
   const whatsappContact =
@@ -287,7 +305,7 @@ async function processIncomingMessage(
 
   /**
    * ===================================================
-   * 3. AMBIL ISI PESAN
+   * 3. ISI PESAN
    * ===================================================
    */
   let messageText: string | null =
@@ -298,8 +316,25 @@ async function processIncomingMessage(
     "text"
   ) {
     messageText =
-      message.text?.body ??
+      message.text?.body?.trim() ??
       null;
+  }
+
+  if (!messageText) {
+    await saveWhatsAppMessage({
+      issueId:
+        null,
+
+      phoneNumber,
+
+      messageId,
+
+      messageType,
+
+      messageText,
+    });
+
+    return;
   }
 
   /**
@@ -332,9 +367,6 @@ async function processIncomingMessage(
   contact =
     existingContact;
 
-  /**
-   * Contact baru.
-   */
   if (!contact) {
     const {
       data: newContact,
@@ -366,7 +398,7 @@ async function processIncomingMessage(
   }
 
   /**
-   * Update nama jika berubah.
+   * Update nama contact
    */
   if (
     contactName &&
@@ -395,6 +427,9 @@ async function processIncomingMessage(
     if (updateContactError) {
       throw updateContactError;
     }
+
+    contact.name =
+      contactName;
   }
 
   /**
@@ -402,12 +437,6 @@ async function processIncomingMessage(
    * 5. CARI ISSUE WHATSAPP AKTIF
    * ===================================================
    */
-  const activeStatuses = [
-    "Open",
-    "On Progress",
-    "Resolved",
-  ];
-
   const {
     data: activeIssues,
     error:
@@ -454,11 +483,8 @@ async function processIncomingMessage(
 
   /**
    * ===================================================
-   * 6. SIMPAN PESAN
+   * 6. JIKA SUDAH ADA ISSUE AKTIF
    * ===================================================
-   *
-   * Jika sudah ada Issue aktif,
-   * langsung hubungkan pesan ke Issue tersebut.
    */
   if (activeIssue) {
     await saveWhatsAppMessage({
@@ -479,19 +505,95 @@ async function processIncomingMessage(
       activeIssue.issue_code
     );
 
+    await sendWhatsAppMessage(
+      phoneNumber,
+      `Pesan Anda sudah ditambahkan ke laporan ${activeIssue.issue_code}.\n\nStatus saat ini: ${activeIssue.status}.`
+    );
+
     return;
   }
 
   /**
    * ===================================================
-   * 7. BELUM ADA ISSUE
+   * 7. CEK APAKAH PESAN ADALAH PROJECT
+   * ===================================================
+   */
+  const detectedProject =
+    detectProject(
+      messageText
+    );
+
+  /**
+   * ===================================================
+   * 8. JIKA CONTACT BELUM PUNYA PROJECT
+   * ===================================================
+   */
+  if (!contact.project) {
+
+    /**
+     * Kalau pesan merupakan project,
+     * langsung simpan project.
+     */
+    if (detectedProject) {
+
+      await updateContactProject(
+        contact.id,
+        detectedProject
+      );
+
+      await saveWhatsAppMessage({
+        issueId:
+          null,
+
+        phoneNumber,
+
+        messageId,
+
+        messageType,
+
+        messageText,
+      });
+
+      await sendWhatsAppMessage(
+        phoneNumber,
+        `Project ${detectedProject} berhasil dipilih.\n\nSekarang silakan kirim lokasi/unit tempat masalah terjadi.`
+      );
+
+      return;
+    }
+
+    /**
+     * Pesan pertama dianggap sebagai
+     * keluhan/laporan.
+     */
+    await saveWhatsAppMessage({
+      issueId:
+        null,
+
+      phoneNumber,
+
+      messageId,
+
+      messageType,
+
+      messageText,
+    });
+
+    await sendWhatsAppMessage(
+      phoneNumber,
+      `Baik, kami bantu buatkan laporan.\n\nSilakan pilih Project:\n\n1. TAM\n2. BPKB\n3. STNK\n4. Mahindra\n5. Hyundai\n6. LMS\n\nBalas dengan nama project atau nomor pilihannya.`
+    );
+
+    return;
+  }
+
+  /**
+   * ===================================================
+   * 9. PROJECT SUDAH ADA
    * ===================================================
    *
-   * Untuk sementara pesan disimpan
-   * tanpa issue_id.
-   *
-   * Issue baru TIDAK dibuat dulu karena
-   * project/location belum tentu diketahui.
+   * Berarti pesan berikutnya dianggap
+   * sebagai lokasi.
    */
   await saveWhatsAppMessage({
     issueId:
@@ -506,39 +608,463 @@ async function processIncomingMessage(
     messageText,
   });
 
-  console.log(
-    "Pesan WhatsApp disimpan sebagai pesan baru."
+  const location =
+    messageText.trim();
+
+  if (!location) {
+    await sendWhatsAppMessage(
+      phoneNumber,
+      "Mohon kirim lokasi/unit tempat masalah terjadi."
+    );
+
+    return;
+  }
+
+  /**
+   * ===================================================
+   * 10. CARI PESAN KELUHAN PERTAMA
+   * ===================================================
+   *
+   * Ambil pesan incoming yang belum
+   * terhubung ke issue.
+   */
+  const {
+    data: pendingMessages,
+    error:
+      pendingMessageError,
+  } = await supabase
+    .from(
+      "whatsapp_messages"
+    )
+    .select(
+      `
+        id,
+        message_text,
+        message_type,
+        created_at
+      `
+    )
+    .eq(
+      "phone_number",
+      phoneNumber
+    )
+    .eq(
+      "direction",
+      "incoming"
+    )
+    .is(
+      "issue_id",
+      null
+    )
+    .eq(
+      "message_type",
+      "text"
+    )
+    .order(
+      "created_at",
+      {
+        ascending: true,
+      }
+    )
+    .limit(20);
+
+  if (pendingMessageError) {
+    throw pendingMessageError;
+  }
+
+  /**
+   * Jangan gunakan pesan project
+   * atau nomor pilihan sebagai keluhan.
+   */
+  const complaintMessage =
+    pendingMessages?.find(
+      (item) => {
+        const text =
+          item.message_text
+            ?.trim()
+            .toUpperCase();
+
+        if (!text) {
+          return false;
+        }
+
+        if (
+          detectProject(text)
+        ) {
+          return false;
+        }
+
+        if (
+          [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+          ].includes(text)
+        ) {
+          return false;
+        }
+
+        return true;
+      }
+    ) ?? null;
+
+  if (!complaintMessage) {
+    await sendWhatsAppMessage(
+      phoneNumber,
+      "Keluhan belum ditemukan. Silakan kirim kembali masalah yang ingin dilaporkan."
+    );
+
+    return;
+  }
+
+  /**
+   * ===================================================
+   * 11. GENERATE ISSUE CODE
+   * ===================================================
+   */
+  const issueCode =
+    await generateIssueCode();
+
+  /**
+   * ===================================================
+   * 12. CREATE ISSUE
+   * ===================================================
+   */
+  const {
+    data: newIssue,
+    error:
+      createIssueError,
+  } = await supabase
+    .from("issues")
+    .insert({
+      issue_code:
+        issueCode,
+
+      title:
+        complaintMessage.message_text,
+
+      description:
+        complaintMessage.message_text,
+
+      category:
+        "Other",
+
+      priority:
+        "Medium",
+
+      location:
+        location,
+
+      status:
+        "Open",
+
+      reporter:
+        phoneNumber,
+
+      project:
+        contact.project,
+
+      source:
+        "WhatsApp",
+
+      created_at:
+        new Date().toISOString(),
+
+      updated_at:
+        new Date().toISOString(),
+    })
+    .select(
+      `
+        id,
+        issue_code,
+        title,
+        project,
+        location,
+        status,
+        priority
+      `
+    )
+    .single();
+
+  if (createIssueError) {
+    throw createIssueError;
+  }
+
+  /**
+   * ===================================================
+   * 13. HUBUNGKAN PESAN KELUHAN
+   * ===================================================
+   */
+  const {
+    error:
+      linkComplaintError,
+  } = await supabase
+    .from(
+      "whatsapp_messages"
+    )
+    .update({
+      issue_id:
+        newIssue.id,
+    })
+    .eq(
+      "id",
+      complaintMessage.id
+    );
+
+  if (linkComplaintError) {
+    throw linkComplaintError;
+  }
+
+  /**
+   * ===================================================
+   * 14. HUBUNGKAN PESAN LOCATION
+   * ===================================================
+   */
+  if (messageId) {
+    const {
+      error:
+        linkLocationError,
+    } = await supabase
+      .from(
+        "whatsapp_messages"
+      )
+      .update({
+        issue_id:
+          newIssue.id,
+      })
+      .eq(
+        "message_id",
+        messageId
+      );
+
+    if (linkLocationError) {
+      console.error(
+        "Gagal menghubungkan pesan lokasi:",
+        linkLocationError
+      );
+    }
+  }
+
+  /**
+   * ===================================================
+   * 15. RESET PROJECT CONTACT
+   * ===================================================
+   */
+  await updateContactProject(
+    contact.id,
+    null
   );
 
   /**
    * ===================================================
-   * 8. DEBUG INFO
+   * 16. BALAS WHATSAPP
    * ===================================================
    */
-  console.log({
+  await sendWhatsAppMessage(
     phoneNumber,
-    contactName,
+    `Laporan berhasil dibuat. ✅\n\nKode Issue: ${newIssue.issue_code}\nProject: ${newIssue.project}\nLokasi: ${newIssue.location}\nPrioritas: ${newIssue.priority}\nStatus: ${newIssue.status}\n\nTim Helpdesk akan menindaklanjuti laporan Anda.`
+  );
+
+  console.log(
+    "================================="
+  );
+
+  console.log(
+    "ISSUE BERHASIL DIBUAT"
+  );
+
+  console.log({
+    issueId:
+      newIssue.id,
+
+    issueCode:
+      newIssue.issue_code,
+
     project:
-      contact.project ??
-      null,
-    messageType,
-    messageText,
+      newIssue.project,
+
+    location:
+      newIssue.location,
+
+    reporter:
+      phoneNumber,
   });
 
-  /**
-   * ===================================================
-   * TODO:
-   *
-   * Tahap berikutnya:
-   *
-   * - Deteksi project
-   * - Deteksi location
-   * - Jika project belum diketahui → tanyakan
-   * - Jika location belum diketahui → tanyakan
-   * - Jika sudah lengkap → create issue
-   * - Kirim balasan WhatsApp
-   * ===================================================
-   */
+  console.log(
+    "================================="
+  );
+}
+
+/**
+ * =====================================================
+ * DETECT PROJECT
+ * =====================================================
+ */
+function detectProject(
+  text: string
+): string | null {
+  const normalized =
+    text
+      .trim()
+      .toUpperCase();
+
+  const projectNumbers: Record<
+    string,
+    string
+  > = {
+    "1": "TAM",
+    "2": "BPKB",
+    "3": "STNK",
+    "4": "Mahindra",
+    "5": "Hyundai",
+    "6": "LMS",
+  };
+
+  if (
+    projectNumbers[
+      normalized
+    ]
+  ) {
+    return projectNumbers[
+      normalized
+    ];
+  }
+
+  const exactProject =
+    PROJECTS.find(
+      (project) =>
+        project.toUpperCase() ===
+        normalized
+    );
+
+  if (exactProject) {
+    return exactProject;
+  }
+
+  return null;
+}
+
+/**
+ * =====================================================
+ * UPDATE CONTACT PROJECT
+ * =====================================================
+ */
+async function updateContactProject(
+  contactId: number,
+  project: string | null
+) {
+  const {
+    error,
+  } = await supabase
+    .from(
+      "whatsapp_contacts"
+    )
+    .update({
+      project:
+        project,
+
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq(
+      "id",
+      contactId
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
+/**
+ * =====================================================
+ * GENERATE ISSUE CODE
+ * =====================================================
+ *
+ * Format:
+ * ISS-YYYYMMDD-001
+ */
+async function generateIssueCode() {
+  const now =
+    new Date();
+
+  const year =
+    now.getUTCFullYear();
+
+  const month =
+    String(
+      now.getUTCMonth() + 1
+    ).padStart(2, "0");
+
+  const day =
+    String(
+      now.getUTCDate()
+    ).padStart(2, "0");
+
+  const prefix =
+    `ISS-${year}${month}${day}-`;
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("issues")
+    .select(
+      "issue_code"
+    )
+    .like(
+      "issue_code",
+      `${prefix}%`
+    )
+    .order(
+      "issue_code",
+      {
+        ascending: false,
+      }
+    )
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  let nextNumber =
+    1;
+
+  if (
+    data &&
+    data.length > 0
+  ) {
+    const lastCode =
+      data[0]
+        .issue_code;
+
+    const lastNumber =
+      Number(
+        lastCode
+          .split("-")
+          .pop()
+      );
+
+    if (
+      !Number.isNaN(
+        lastNumber
+      )
+    ) {
+      nextNumber =
+        lastNumber + 1;
+    }
+  }
+
+  return (
+    prefix +
+    String(
+      nextNumber
+    ).padStart(3, "0")
+  );
 }
 
 /**
@@ -594,5 +1120,92 @@ async function saveWhatsAppMessage({
 
   if (error) {
     throw error;
+  }
+}
+
+/**
+ * =====================================================
+ * SEND WHATSAPP MESSAGE
+ * =====================================================
+ */
+async function sendWhatsAppMessage(
+  phoneNumber: string,
+  messageText: string
+) {
+  if (
+    !whatsappAccessToken ||
+    !whatsappPhoneNumberId
+  ) {
+    console.error(
+      "WhatsApp credentials belum lengkap."
+    );
+
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        `https://graph.facebook.com/v23.0/${whatsappPhoneNumberId}/messages`,
+        {
+          method:
+            "POST",
+
+          headers: {
+            "Authorization":
+              `Bearer ${whatsappAccessToken}`,
+
+            "Content-Type":
+              "application/json",
+          },
+
+          body:
+            JSON.stringify({
+              messaging_product:
+                "whatsapp",
+
+              recipient_type:
+                "individual",
+
+              to:
+                phoneNumber,
+
+              type:
+                "text",
+
+              text: {
+                preview_url:
+                  false,
+
+                body:
+                  messageText,
+              },
+            }),
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (
+      !response.ok
+    ) {
+      console.error(
+        "WhatsApp send error:",
+        result
+      );
+
+      return;
+    }
+
+    console.log(
+      "WhatsApp reply berhasil dikirim:",
+      result
+    );
+  } catch (error) {
+    console.error(
+      "WhatsApp reply error:",
+      error
+    );
   }
 }
