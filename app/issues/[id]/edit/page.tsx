@@ -742,6 +742,10 @@ export default function EditIssuePage() {
                 BPKB Banjarbaru
               </option>
 
+              <option value="LMS BACY">
+                LMS BACY
+              </option>
+
             </select>
 
           </div>
