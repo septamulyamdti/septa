@@ -32,6 +32,7 @@ type ConversationState =
   | "CONFIRMING_ISSUE"
   | "EDITING_ISSUE"
   | "WAITING_ISSUE_CODE"
+  | "WAITING_MY_ISSUE_SELECTION"
   | "CONFIRMING_ACTIVE_ISSUE"
   | "AGENT";
 
@@ -50,6 +51,9 @@ type DraftData = {
 
   pending_message_id?: number;
   pending_message_text?: string;
+
+  my_issue_ids?: number[];
+  my_issue_codes?: string[];
 };
 
 type Conversation = {
@@ -1202,10 +1206,16 @@ ${mainMenu()}`
         "\n\n━━━━━━━━━━━━━━\n\n"
       );
 
+  const myIssueIds = data.map((issue) => issue.id);
+  const myIssueCodes = data.map((issue) => issue.issue_code);
+
   await saveConversation(
     phoneNumber,
-    "MENU",
-    {}
+    "WAITING_MY_ISSUE_SELECTION",
+    {
+      my_issue_ids: myIssueIds,
+      my_issue_codes: myIssueCodes,
+    }
   );
 
   await sendWhatsAppMessage(
@@ -1218,16 +1228,12 @@ ${issueList}
 
 ━━━━━━━━━━━━━━
 
-Untuk melihat detail salah satu issue:
-
-👉 Ketik *STATUS*
-👉 Masukkan Issue Code
+👉 *Ketik nomor issue* untuk melihat detail.
 
 Contoh:
-*ISS-20260916-001*
+*1* untuk melihat detail issue nomor 1.
 
 Ketik *BUAT ISSUE* untuk membuat laporan baru.
-
 Ketik *MENU* untuk kembali ke menu utama.`
   );
 }
@@ -2225,6 +2231,66 @@ Contoh:
       await sendIssueStatus(
         phoneNumber,
         text
+      );
+
+      await saveConversation(
+        phoneNumber,
+        "MENU",
+        {}
+      );
+
+      return;
+    }
+
+    /* =====================================================
+       WAITING MY ISSUE SELECTION
+    ===================================================== */
+
+    case "WAITING_MY_ISSUE_SELECTION": {
+      const selectedNumber = Number(text);
+      const issueCodes = draft.my_issue_codes || [];
+
+      if (
+        !Number.isInteger(selectedNumber) ||
+        selectedNumber < 1 ||
+        selectedNumber > issueCodes.length
+      ) {
+        await sendWhatsAppMessage(
+          phoneNumber,
+          `❌ *Pilihan tidak valid.*
+
+Silakan ketik nomor issue sesuai daftar *My Issues*.
+
+Contoh:
+*1*`
+        );
+
+        return;
+      }
+
+      const selectedIssueCode =
+        issueCodes[selectedNumber - 1];
+
+      if (!selectedIssueCode) {
+        await saveConversation(
+          phoneNumber,
+          "MENU",
+          {}
+        );
+
+        await sendWhatsAppMessage(
+          phoneNumber,
+          `❌ Issue tidak dapat ditemukan.
+
+Ketik *MY ISSUES* untuk melihat daftar issue Anda lagi.`
+        );
+
+        return;
+      }
+
+      await sendIssueStatus(
+        phoneNumber,
+        selectedIssueCode
       );
 
       await saveConversation(
