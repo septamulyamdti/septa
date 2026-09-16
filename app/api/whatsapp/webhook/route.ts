@@ -747,7 +747,22 @@ async function getIssueByCode(
     await supabase
       .from("issues")
       .select(
-        "id, issue_code, title, description, project, location, category, priority, status, reporter, created_at, updated_at"
+        `
+        id,
+        issue_code,
+        title,
+        description,
+        project,
+        location,
+        category,
+        priority,
+        status,
+        reporter,
+        assignee,
+        resolution,
+        created_at,
+        updated_at
+        `
       )
       .ilike(
         "issue_code",
@@ -785,33 +800,66 @@ async function sendIssueStatus(
       phoneNumber,
       `❌ *Issue tidak ditemukan.*
 
+Issue Code:
+*${issueCode.trim().toUpperCase()}*
+
 Pastikan Issue Code yang Anda masukkan sudah benar.
 
 Contoh:
 *ISS-20260916-022*
 
-Ketik *STATUS* untuk mencoba lagi.`
+Ketik *STATUS* untuk mencoba lagi.
+Ketik *MENU* untuk kembali ke menu utama.`
     );
 
     return;
   }
 
-  const { data: history } =
-    await supabase
-      .from("issue_history")
-      .select(
-        "action, old_status, new_status, old_priority, new_priority, description, created_at"
-      )
-      .eq(
-        "issue_id",
-        issue.id
-      )
-      .order("created_at", {
-        ascending: false,
-      })
-      .limit(5);
+  /* =====================================================
+     GET ISSUE HISTORY
+  ===================================================== */
 
-  let historyText = "";
+  const {
+    data: history,
+    error: historyError,
+  } = await supabase
+    .from("issue_history")
+    .select(
+      `
+      action,
+      old_status,
+      new_status,
+      old_priority,
+      new_priority,
+      description,
+      created_at
+      `
+    )
+    .eq(
+      "issue_id",
+      issue.id
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    )
+    .limit(5);
+
+  if (historyError) {
+    console.error(
+      "GET ISSUE HISTORY ERROR:",
+      historyError
+    );
+  }
+
+  /* =====================================================
+     FORMAT HISTORY
+  ===================================================== */
+
+  let historyText =
+    "Belum ada riwayat perubahan.";
 
   if (
     history &&
@@ -824,41 +872,145 @@ Ketik *STATUS* untuk mencoba lagi.`
             item,
             index
           ) => {
-            const statusText =
+            const changes: string[] =
+              [];
+
+            /* Status */
+
+            if (
+              item.old_status ||
               item.new_status
-                ? `Status: ${item.new_status}`
-                : "";
+            ) {
+              if (
+                item.old_status &&
+                item.new_status
+              ) {
+                changes.push(
+                  `Status: ${item.old_status} → ${item.new_status}`
+                );
+              } else if (
+                item.new_status
+              ) {
+                changes.push(
+                  `Status: ${item.new_status}`
+                );
+              }
+            }
 
-            const priorityText =
+            /* Priority */
+
+            if (
+              item.old_priority ||
               item.new_priority
-                ? `Priority: ${item.new_priority}`
-                : "";
+            ) {
+              if (
+                item.old_priority &&
+                item.new_priority
+              ) {
+                changes.push(
+                  `Priority: ${item.old_priority} → ${item.new_priority}`
+                );
+              } else if (
+                item.new_priority
+              ) {
+                changes.push(
+                  `Priority: ${item.new_priority}`
+                );
+              }
+            }
 
-            const description =
-              item.description ||
-              "";
+            /* Description */
 
-            return `${index + 1}. ${item.action || "Update"}
-${statusText}
-${priorityText}
-${description}`.trim();
+            if (
+              item.description
+            ) {
+              changes.push(
+                item.description
+              );
+            }
+
+            /* Date */
+
+            const date =
+              item.created_at
+                ? new Date(
+                    item.created_at
+                  ).toLocaleString(
+                    "id-ID",
+                    {
+                      dateStyle:
+                        "medium",
+                      timeStyle:
+                        "short",
+                    }
+                  )
+                : "-";
+
+            return `*${index + 1}.* ${
+              item.action ||
+              "Update"
+            }
+${changes.length > 0
+  ? changes.join("\n")
+  : "Tidak ada detail perubahan."}
+🕐 ${date}`;
           }
         )
         .join("\n\n");
-  } else {
-    historyText =
-      "Belum ada riwayat perubahan.";
   }
+
+  /* =====================================================
+     FORMAT DATE
+  ===================================================== */
+
+  const createdAt =
+    issue.created_at
+      ? new Date(
+          issue.created_at
+        ).toLocaleString(
+          "id-ID",
+          {
+            dateStyle:
+              "medium",
+            timeStyle:
+              "short",
+          }
+        )
+      : "-";
+
+  const updatedAt =
+    issue.updated_at
+      ? new Date(
+          issue.updated_at
+        ).toLocaleString(
+          "id-ID",
+          {
+            dateStyle:
+              "medium",
+            timeStyle:
+              "short",
+          }
+        )
+      : "-";
+
+  /* =====================================================
+     SEND DETAIL
+  ===================================================== */
 
   await sendWhatsAppMessage(
     phoneNumber,
-    `🔍 *Status Issue*
+    `🔍 *DETAIL STATUS ISSUE*
+
+━━━━━━━━━━━━━━
 
 *Issue Code:*
 ${issue.issue_code}
 
 *Issue:*
-${issue.title || issue.description || "-"}
+${issue.title || "-"}
+
+*Description:*
+${issue.description || "-"}
 
 *Project:*
 ${issue.project || "-"}
@@ -875,6 +1027,20 @@ ${issue.priority || "-"}
 *Status:*
 ${issue.status || "-"}
 
+*Assignee:*
+${issue.assignee || "Belum ditugaskan"}
+
+*Resolution:*
+${issue.resolution || "Belum ada"}
+
+━━━━━━━━━━━━━━
+
+📅 *Dibuat:*
+${createdAt}
+
+🔄 *Update terakhir:*
+${updatedAt}
+
 ━━━━━━━━━━━━━━
 
 📜 *Riwayat Terakhir*
@@ -882,6 +1048,10 @@ ${issue.status || "-"}
 ${historyText}
 
 ━━━━━━━━━━━━━━
+
+Ketik *STATUS* untuk cek issue lain.
+
+Ketik *MY ISSUES* untuk melihat laporan Anda.
 
 Ketik *MENU* untuk kembali ke menu utama.`
   );
@@ -898,15 +1068,30 @@ async function sendMyIssues(
     await supabase
       .from("issues")
       .select(
-        "id, issue_code, title, project, location, category, priority, status, created_at"
+        `
+        id,
+        issue_code,
+        title,
+        project,
+        location,
+        category,
+        priority,
+        status,
+        assignee,
+        created_at,
+        updated_at
+        `
       )
       .eq(
         "reporter",
         phoneNumber
       )
-      .order("created_at", {
-        ascending: false,
-      })
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      )
       .limit(10);
 
   if (error) {
@@ -917,9 +1102,13 @@ async function sendMyIssues(
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `❌ Terjadi kesalahan saat mengambil data issue.
+      `❌ *Gagal mengambil My Issues.*
 
-Silakan coba lagi.`
+Terjadi kesalahan saat mengambil data laporan Anda.
+
+Silakan coba lagi dengan mengetik:
+
+👉 *MY ISSUES*`
     );
 
     return;
@@ -937,9 +1126,15 @@ Silakan coba lagi.`
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `📋 *My Issues*
+      `📋 *MY ISSUES*
 
-Belum ada issue yang dibuat melalui WhatsApp.
+Belum ada issue yang dibuat melalui nomor WhatsApp ini.
+
+Anda dapat membuat laporan baru dengan mengetik:
+
+👉 *BUAT ISSUE*
+
+━━━━━━━━━━━━━━
 
 ${mainMenu()}`
     );
@@ -947,20 +1142,65 @@ ${mainMenu()}`
     return;
   }
 
+  /* =====================================================
+     FORMAT ISSUE LIST
+  ===================================================== */
+
   const issueList =
     data
       .map(
         (
           issue,
           index
-        ) =>
-          `${index + 1}. *${issue.issue_code}*
-${issue.title || "-"}
-Project: ${issue.project || "-"}
-Status: ${issue.status || "-"}
-Priority: ${issue.priority || "-"}`
+        ) => {
+          const createdAt =
+            issue.created_at
+              ? new Date(
+                  issue.created_at
+                ).toLocaleDateString(
+                  "id-ID"
+                )
+              : "-";
+
+          return `${index + 1}️⃣ *${
+            issue.issue_code
+          }*
+
+📝 Issue: ${
+            issue.title || "-"
+          }
+
+📁 Project: ${
+            issue.project || "-"
+          }
+
+📍 Location: ${
+            issue.location || "-"
+          }
+
+🏷️ Category: ${
+            issue.category || "-"
+          }
+
+⚡ Priority: ${
+            issue.priority || "-"
+          }
+
+📊 Status: ${
+            issue.status || "-"
+          }
+
+👨‍💻 Assignee: ${
+            issue.assignee ||
+            "Belum ditugaskan"
+          }
+
+📅 Dibuat: ${createdAt}`;
+        }
       )
-      .join("\n\n");
+      .join(
+        "\n\n━━━━━━━━━━━━━━\n\n"
+      );
 
   await saveConversation(
     phoneNumber,
@@ -970,13 +1210,25 @@ Priority: ${issue.priority || "-"}`
 
   await sendWhatsAppMessage(
     phoneNumber,
-    `📋 *My Issues*
+    `📋 *MY ISSUES*
+
+Berikut laporan issue yang dibuat melalui nomor WhatsApp Anda:
 
 ${issueList}
 
 ━━━━━━━━━━━━━━
 
-${mainMenu()}`
+Untuk melihat detail salah satu issue:
+
+👉 Ketik *STATUS*
+👉 Masukkan Issue Code
+
+Contoh:
+*ISS-20260916-001*
+
+Ketik *BUAT ISSUE* untuk membuat laporan baru.
+
+Ketik *MENU* untuk kembali ke menu utama.`
   );
 }
 
