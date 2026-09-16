@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const whatsappAccessToken = process.env.WHATSAPP_ACCESS_TOKEN!;
-const whatsappPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID!;
-const whatsappVerifyToken = process.env.WHATSAPP_VERIFY_TOKEN!;
+const supabaseServiceRoleKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const whatsappAccessToken =
+  process.env.WHATSAPP_ACCESS_TOKEN!;
+const whatsappPhoneNumberId =
+  process.env.WHATSAPP_PHONE_NUMBER_ID!;
+const whatsappVerifyToken =
+  process.env.WHATSAPP_VERIFY_TOKEN!;
 
 const supabase = createClient(
   supabaseUrl,
@@ -115,6 +119,13 @@ const PRIORITIES = [
   "Medium",
   "Low",
 ];
+
+/* =========================================================
+   CONVERSATION TIMEOUT
+========================================================= */
+
+const CONVERSATION_TIMEOUT_MS =
+  1 * 60 * 1000;
 
 /* =========================================================
    WELCOME MESSAGE
@@ -258,7 +269,8 @@ async function saveWhatsAppMessage(
   message: WhatsAppMessage
 ) {
   try {
-    const messageId = message.id || null;
+    const messageId =
+      message.id || null;
 
     if (!messageId) {
       return null;
@@ -266,11 +278,15 @@ async function saveWhatsAppMessage(
 
     /* Duplicate check */
 
-    const { data: existing } = await supabase
-      .from("whatsapp_messages")
-      .select("id")
-      .eq("message_id", messageId)
-      .maybeSingle();
+    const { data: existing } =
+      await supabase
+        .from("whatsapp_messages")
+        .select("id")
+        .eq(
+          "message_id",
+          messageId
+        )
+        .maybeSingle();
 
     if (existing) {
       return existing.id;
@@ -281,11 +297,15 @@ async function saveWhatsAppMessage(
     if (message.type === "text") {
       messageText =
         message.text?.body || "";
-    } else if (message.type === "image") {
+    } else if (
+      message.type === "image"
+    ) {
       messageText =
         message.image?.caption ||
         "[IMAGE]";
-    } else if (message.type === "document") {
+    } else if (
+      message.type === "document"
+    ) {
       messageText =
         message.document?.caption ||
         message.document?.filename ||
@@ -295,11 +315,13 @@ async function saveWhatsAppMessage(
         `[${message.type || "UNKNOWN"}]`;
     }
 
-    const createdAt = message.timestamp
-      ? new Date(
-          Number(message.timestamp) * 1000
-        ).toISOString()
-      : new Date().toISOString();
+    const createdAt =
+      message.timestamp
+        ? new Date(
+            Number(message.timestamp) *
+              1000
+          ).toISOString()
+        : new Date().toISOString();
 
     const { data, error } =
       await supabase
@@ -345,9 +367,14 @@ async function getConversation(
 ): Promise<Conversation> {
   const { data, error } =
     await supabase
-      .from("whatsapp_conversations")
+      .from(
+        "whatsapp_conversations"
+      )
       .select("*")
-      .eq("phone_number", phoneNumber)
+      .eq(
+        "phone_number",
+        phoneNumber
+      )
       .maybeSingle();
 
   if (error) {
@@ -383,7 +410,9 @@ async function saveConversation(
 ) {
   const { error } =
     await supabase
-      .from("whatsapp_conversations")
+      .from(
+        "whatsapp_conversations"
+      )
       .upsert(
         {
           phone_number: phoneNumber,
@@ -393,7 +422,8 @@ async function saveConversation(
             new Date().toISOString(),
         },
         {
-          onConflict: "phone_number",
+          onConflict:
+            "phone_number",
         }
       );
 
@@ -403,6 +433,36 @@ async function saveConversation(
       error
     );
   }
+}
+
+/* =========================================================
+   CHECK CONVERSATION TIMEOUT
+========================================================= */
+
+function isConversationExpired(
+  conversation: Conversation
+) {
+  if (!conversation.updated_at) {
+    return false;
+  }
+
+  const lastActivity =
+    new Date(
+      conversation.updated_at
+    ).getTime();
+
+  if (
+    Number.isNaN(lastActivity)
+  ) {
+    return false;
+  }
+
+  const now = Date.now();
+
+  return (
+    now - lastActivity >=
+    CONVERSATION_TIMEOUT_MS
+  );
 }
 
 /* =========================================================
@@ -1082,7 +1142,9 @@ Silakan coba lagi dengan mengetik:
       const {
         error: linkError,
       } = await supabase
-        .from("whatsapp_messages")
+        .from(
+          "whatsapp_messages"
+        )
         .update({
           issue_id:
             issue.id,
@@ -1111,7 +1173,9 @@ Silakan coba lagi dengan mengetik:
         error:
           bulkLinkError,
       } = await supabase
-        .from("whatsapp_messages")
+        .from(
+          "whatsapp_messages"
+        )
         .update({
           issue_id:
             issue.id,
@@ -1317,7 +1381,7 @@ async function handleConversationState(
   switch (state) {
     /* =====================================================
        WELCOME
-       ===================================================== */
+    ===================================================== */
 
     case "WELCOME": {
       if (text === "MENU") {
@@ -1349,7 +1413,7 @@ Setelah itu Anda dapat memilih layanan yang tersedia.`
 
     /* =====================================================
        MENU
-       ===================================================== */
+    ===================================================== */
 
     case "MENU": {
       await handleMenuState(
@@ -1969,7 +2033,7 @@ Ketik *BATAL* jika ingin membatalkan.`
     default: {
       /*
        * User belum pernah memulai percakapan
-       * atau conversation masih berada di IDLE.
+       * atau conversation sudah kembali ke IDLE.
        *
        * Jangan langsung tampilkan menu.
        * Arahkan user untuk mengetik MENU.
@@ -2054,10 +2118,52 @@ async function processIncomingMessage(
      GET CONVERSATION
   ===================================================== */
 
-  const conversation =
+  let conversation =
     await getConversation(
       phoneNumber
     );
+
+  /* =====================================================
+     CHECK 30 MINUTE INACTIVITY
+  ===================================================== */
+
+  if (
+    isConversationExpired(
+      conversation
+    )
+  ) {
+    console.log(
+      "WHATSAPP CONVERSATION EXPIRED:",
+      phoneNumber
+    );
+
+    /*
+     * Sesi lama dianggap selesai.
+     *
+     * Tidak menghapus:
+     * - issues
+     * - issue_history
+     * - whatsapp_messages
+     *
+     * Hanya mereset conversation:
+     * - state -> IDLE
+     * - draft_data -> {}
+     */
+
+    await saveConversation(
+      phoneNumber,
+      "IDLE",
+      {}
+    );
+
+    conversation = {
+      ...conversation,
+      state: "IDLE",
+      draft_data: {},
+      updated_at:
+        new Date().toISOString(),
+    };
+  }
 
   /* =====================================================
      GLOBAL COMMAND: BATAL
