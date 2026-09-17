@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -55,6 +55,61 @@ export default function EditIssuePage() {
     assignee: "",
     resolution: "",
   });
+
+  // =====================================================
+  // PROJECT & LOCATION MASTER
+  // =====================================================
+
+  const PROJECT_LOCATIONS: Record<string, string[]> = {
+    TAM: [
+      "NVDC Karawang",
+      "NVDC Sunter",
+      "NVDC Cibitung",
+    ],
+
+    BPKB: [
+      "Kepri",
+      "Riau",
+      "Sulut",
+      "Sulteng",
+      "Sulsel",
+      "Sultra",
+      "Bulukumba",
+      "Kalteng",
+      "Kalsel",
+      "Sumenep",
+      "Jogja",
+    ],
+
+    STNK: [
+      "Lampung",
+      "Jabar",
+    ],
+
+    LMS: [
+      "BACY",
+    ],
+
+    Hyundai: [
+      "Hyundai Cikarang",
+    ],
+
+    Mahindra: [
+      "Mahindra Cikarang",
+    ],
+  };
+
+  // =====================================================
+  // LOCATION OPTIONS
+  // =====================================================
+
+  const locationOptions = useMemo(() => {
+    if (!formData.project) {
+      return [];
+    }
+
+    return PROJECT_LOCATIONS[formData.project] || [];
+  }, [formData.project]);
 
   // =====================================================
   // GET ISSUE
@@ -122,6 +177,18 @@ export default function EditIssuePage() {
     >
   ) => {
     const { name, value } = e.target;
+
+    // Jika Project berubah,
+    // reset Location agar selalu sesuai Project baru.
+    if (name === "project") {
+      setFormData((prev) => ({
+        ...prev,
+        project: value,
+        location: "",
+      }));
+
+      return;
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -712,39 +779,23 @@ export default function EditIssuePage() {
               onChange={handleChange}
               className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
+              disabled={!formData.project}
             >
 
               <option value="">
-                Select Location
+                {formData.project
+                  ? "Select Location"
+                  : "Select Project First"}
               </option>
 
-              <option value="NVDC Cibitung">
-                NVDC Cibitung
-              </option>
-
-              <option value="NVDC Sunter">
-                NVDC Sunter
-              </option>
-
-              <option value="NVDC Karawang">
-                NVDC Karawang
-              </option>
-
-              <option value="BPKB Makassar">
-                BPKB Makassar
-              </option>
-
-              <option value="BPKB Palangkaraya">
-                BPKB Palangkaraya
-              </option>
-
-              <option value="BPKB Banjarbaru">
-                BPKB Banjarbaru
-              </option>
-
-              <option value="LMS BACY">
-                LMS BACY
-              </option>
+              {locationOptions.map((location) => (
+                <option
+                  key={location}
+                  value={location}
+                >
+                  {location}
+                </option>
+              ))}
 
             </select>
 

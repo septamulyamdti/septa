@@ -37,6 +37,51 @@ function IssuesPageContent() {
   const [projectFilter, setProjectFilter] = useState("All");
 
   // =====================================================
+  // PROJECT & LOCATION MASTER
+  // =====================================================
+
+  const PROJECT_LOCATIONS: Record<string, string[]> = {
+    TAM: [
+      "NVDC Karawang",
+      "NVDC Sunter",
+      "NVDC Cibitung",
+    ],
+
+    BPKB: [
+      "Kepri",
+      "Riau",
+      "Sulut",
+      "Sulteng",
+      "Sulsel",
+      "Sultra",
+      "Bulukumba",
+      "Kalteng",
+      "Kalsel",
+      "Sumenep",
+      "Jogja",
+    ],
+
+    STNK: [
+      "Lampung",
+      "Jabar",
+    ],
+
+    LMS: [
+      "BACY",
+    ],
+
+    Hyundai: [
+      "Hyundai Cikarang",
+    ],
+
+    Mahindra: [
+      "Mahindra Cikarang",
+    ],
+  };
+
+  const PROJECTS = Object.keys(PROJECT_LOCATIONS);
+
+  // =====================================================
   // GET ISSUES
   // =====================================================
 
@@ -183,6 +228,17 @@ function IssuesPageContent() {
   // =====================================================
 
   const locations = useMemo(() => {
+    // Jika project dipilih, tampilkan hanya
+    // lokasi yang sesuai dengan project tersebut.
+    if (
+      projectFilter !== "All" &&
+      PROJECT_LOCATIONS[projectFilter]
+    ) {
+      return PROJECT_LOCATIONS[projectFilter];
+    }
+
+    // Jika All Project, ambil lokasi yang memang
+    // tersedia di database.
     const uniqueLocations = Array.from(
       new Set(
         issues
@@ -192,23 +248,13 @@ function IssuesPageContent() {
     );
 
     return uniqueLocations.sort();
-  }, [issues]);
+  }, [issues, projectFilter]);
 
   // =====================================================
   // PROJECT LIST
   // =====================================================
 
-  const projects = useMemo(() => {
-    const uniqueProjects = Array.from(
-      new Set(
-        issues
-          .map((issue) => issue.project)
-          .filter(Boolean)
-      )
-    );
-
-    return uniqueProjects.sort();
-  }, [issues]);
+  const projects = PROJECTS;
 
   // =====================================================
   // FILTER LIST
@@ -377,9 +423,16 @@ function IssuesPageContent() {
 
             <select
               value={projectFilter}
-              onChange={(e) =>
-                setProjectFilter(e.target.value)
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+
+                setProjectFilter(value);
+
+                // Reset Location ketika Project berubah
+                // agar tidak ada kombinasi Project/Location
+                // yang tidak sesuai.
+                setLocationFilter("All");
+              }}
               className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="All">
