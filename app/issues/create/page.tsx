@@ -460,65 +460,73 @@ export default function CreateIssuePage() {
     <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
 
       {/* =================================================
-          HEADER
+          STICKY TOP SECTION
       ================================================= */}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
 
-        <div>
-          <p className="text-sm text-slate-500 mb-1">
-            Issue Management
-          </p>
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
-            Create New Issue
-          </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 
-          <p className="text-slate-500 mt-2">
-            Create and report a new issue
-          </p>
+          <div>
+            <p className="text-sm text-slate-500 mb-1">
+              Issue Management
+            </p>
+
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
+              Create New Issue
+            </h1>
+
+            <p className="text-slate-500 mt-2">
+              Create and report a new issue
+            </p>
+          </div>
+
+          {userRole === "admin" ? (
+            <Link
+              href="/issues"
+              className="text-slate-600 hover:text-slate-900"
+            >
+              ← Back to Issues
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.replace("/login");
+                router.refresh();
+              }}
+              className="text-red-600 hover:text-red-700 font-medium"
+            >
+              Logout
+            </button>
+          )}
+
         </div>
 
-        {userRole === "admin" ? (
-  <Link
-    href="/issues"
-    className="text-slate-600 hover:text-slate-900"
-  >
-    ← Back to Issues
-  </Link>
-) : (
-  <button
-    type="button"
-    onClick={async () => {
-      await supabase.auth.signOut();
-      router.replace("/login");
-      router.refresh();
-    }}
-    className="text-red-600 hover:text-red-700 font-medium"
-  >
-    Logout
-  </button>
-)}
+        {/* =================================================
+            REPORTER INFO
+        ================================================= */}
 
-      </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
 
-      {/* =================================================
-          REPORTER INFO
-      ================================================= */}
+          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">
+            Reporter
+          </p>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
+          <p className="text-sm font-semibold text-blue-900 mt-1">
+            {userEmail}
+          </p>
 
-        <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">
-          Reporter
-        </p>
+          <p className="text-xs text-blue-600 mt-1">
+            Reporter otomatis menggunakan akun yang sedang login.
+          </p>
 
-        <p className="text-sm font-semibold text-blue-900 mt-1">
-          {userEmail}
-        </p>
-
-        <p className="text-xs text-blue-600 mt-1">
-          Reporter otomatis menggunakan akun yang sedang login.
-        </p>
+        </div>
 
       </div>
 

@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -84,100 +83,10 @@ export default function DashboardPage() {
   ).length;
 
   // =====================================================
-  // AGING ISSUES
+  // GET ISSUE AGE
   // =====================================================
 
   const now = new Date();
-
-  const agingIssues = issues.filter((issue) => {
-    if (
-      issue.status === "Resolved" ||
-      issue.status === "Closed"
-    ) {
-      return false;
-    }
-
-    if (!issue.created_at) {
-      return false;
-    }
-
-    const createdDate = new Date(issue.created_at);
-
-    const diffMs =
-      now.getTime() - createdDate.getTime();
-
-    const diffDays =
-      diffMs / (1000 * 60 * 60 * 24);
-
-    return diffDays > 3;
-  });
-
-  const aging3Days = issues.filter((issue) => {
-    if (
-      issue.status === "Resolved" ||
-      issue.status === "Closed"
-    ) {
-      return false;
-    }
-
-    if (!issue.created_at) {
-      return false;
-    }
-
-    const createdDate = new Date(issue.created_at);
-
-    const diffDays =
-      (now.getTime() - createdDate.getTime()) /
-      (1000 * 60 * 60 * 24);
-
-    return diffDays > 3;
-  }).length;
-
-  const aging7Days = issues.filter((issue) => {
-    if (
-      issue.status === "Resolved" ||
-      issue.status === "Closed"
-    ) {
-      return false;
-    }
-
-    if (!issue.created_at) {
-      return false;
-    }
-
-    const createdDate = new Date(issue.created_at);
-
-    const diffDays =
-      (now.getTime() - createdDate.getTime()) /
-      (1000 * 60 * 60 * 24);
-
-    return diffDays > 7;
-  }).length;
-
-  const aging14Days = issues.filter((issue) => {
-    if (
-      issue.status === "Resolved" ||
-      issue.status === "Closed"
-    ) {
-      return false;
-    }
-
-    if (!issue.created_at) {
-      return false;
-    }
-
-    const createdDate = new Date(issue.created_at);
-
-    const diffDays =
-      (now.getTime() - createdDate.getTime()) /
-      (1000 * 60 * 60 * 24);
-
-    return diffDays > 14;
-  }).length;
-
-  // =====================================================
-  // GET ISSUE AGE
-  // =====================================================
 
   const getIssueAge = (createdAt?: string) => {
     if (!createdAt) {
@@ -193,6 +102,93 @@ export default function DashboardPage() {
       diffMs / (1000 * 60 * 60 * 24)
     );
   };
+
+  // =====================================================
+  // AGING ISSUES
+  // =====================================================
+
+  const agingIssues = issues.filter((issue) => {
+    if (
+      issue.status === "Resolved" ||
+      issue.status === "Closed"
+    ) {
+      return false;
+    }
+
+    if (!issue.created_at) {
+      return false;
+    }
+
+    const age = getIssueAge(issue.created_at);
+
+    return age > 3;
+  });
+
+  // =====================================================
+  // AGING 3 DAYS
+  // 4 - 7 DAYS
+  // =====================================================
+
+  const aging3Days = issues.filter((issue) => {
+    if (
+      issue.status === "Resolved" ||
+      issue.status === "Closed"
+    ) {
+      return false;
+    }
+
+    if (!issue.created_at) {
+      return false;
+    }
+
+    const age = getIssueAge(issue.created_at);
+
+    return age > 3 && age <= 7;
+  }).length;
+
+  // =====================================================
+  // AGING 7 DAYS
+  // 8 - 14 DAYS
+  // =====================================================
+
+  const aging7Days = issues.filter((issue) => {
+    if (
+      issue.status === "Resolved" ||
+      issue.status === "Closed"
+    ) {
+      return false;
+    }
+
+    if (!issue.created_at) {
+      return false;
+    }
+
+    const age = getIssueAge(issue.created_at);
+
+    return age > 7 && age <= 14;
+  }).length;
+
+  // =====================================================
+  // AGING 14 DAYS
+  // 15 DAYS+
+  // =====================================================
+
+  const aging14Days = issues.filter((issue) => {
+    if (
+      issue.status === "Resolved" ||
+      issue.status === "Closed"
+    ) {
+      return false;
+    }
+
+    if (!issue.created_at) {
+      return false;
+    }
+
+    const age = getIssueAge(issue.created_at);
+
+    return age > 14;
+  }).length;
 
   // =====================================================
   // CHART DATA
@@ -398,60 +394,49 @@ export default function DashboardPage() {
     <main className="p-6 lg:p-8 max-w-7xl mx-auto">
 
       {/* =================================================
-          HEADER
+          STICKY DASHBOARD HEADER + KPI
       ================================================= */}
 
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+      <div className="sticky top-0 z-30 -mx-6 lg:-mx-8 px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">
-            Dashboard
-          </h1>
+        {/* HEADER */}
 
-          <p className="text-slate-500 mt-1">
-            Monitor and manage all reported issues
-          </p>
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800">
+              Dashboard
+            </h1>
+
+            <p className="text-slate-500 mt-1">
+              Monitor and manage all reported issues
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+
+            <Link
+              href="/issues"
+              className="px-4 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-sm text-slate-700"
+            >
+              View All Issues
+            </Link>
+
+            <Link
+              href="/issues/create"
+              className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
+            >
+              + Create Issue
+            </Link>
+
+          </div>
+
         </div>
 
-        <div className="flex gap-3">
+        {/* KPI CARDS */}
 
-          <Link
-            href="/issues"
-            className="px-4 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-sm text-slate-700"
-          >
-            View All Issues
-          </Link>
-
-          <Link
-            href="/issues/create"
-            className="px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm"
-          >
-            + Create Issue
-          </Link>
-
-        </div>
-
-      </div>
-
-      {/* =================================================
-          LOADING
-      ================================================= */}
-
-      {loading ? (
-
-        <div className="bg-white rounded-xl shadow p-10 text-center text-slate-500">
-          Loading dashboard...
-        </div>
-
-      ) : (
-
-        <>
-
-          {/* =================================================
-              KPI CARDS
-          ================================================= */}
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {!loading && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
 
             {/* TOTAL */}
 
@@ -568,6 +553,23 @@ export default function DashboardPage() {
             </Link>
 
           </div>
+        )}
+
+      </div>
+
+      {/* =================================================
+          LOADING
+      ================================================= */}
+
+      {loading ? (
+
+        <div className="bg-white rounded-xl shadow p-10 text-center text-slate-500">
+          Loading dashboard...
+        </div>
+
+      ) : (
+
+        <>
 
           {/* =================================================
               AGING ISSUES
@@ -615,6 +617,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-orange-500 mt-2">
                   Issue belum selesai lebih dari 3 hari →
                 </p>
+
               </Link>
 
               {/* > 7 DAYS */}
@@ -634,6 +637,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-red-500 mt-2">
                   Issue belum selesai lebih dari 7 hari →
                 </p>
+
               </Link>
 
               {/* > 14 DAYS */}
@@ -653,6 +657,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-red-600 mt-2">
                   Issue sangat lama belum diselesaikan →
                 </p>
+
               </Link>
 
             </div>

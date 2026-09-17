@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -297,209 +296,217 @@ export default function MyIssuesPage() {
     <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
 
       {/* =================================================
-          HEADER
+          STICKY TOP SECTION
       ================================================= */}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
 
-        <div>
-          <p className="text-sm text-slate-500 mb-1">
-            Issue Management
-          </p>
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
-            My Issues
-          </h1>
-
-          <p className="text-sm text-slate-500 mt-1">
-            Daftar issue yang kamu buat.
-          </p>
-        </div>
-
-        <Link
-          href="/issues/create"
-          className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition"
-        >
-          + Create Issue
-        </Link>
-
-      </div>
-
-      {/* =================================================
-          USER INFO
-      ================================================= */}
-
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
-
-        <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">
-          Logged in as
-        </p>
-
-        <p className="text-sm font-semibold text-blue-900 mt-1 break-all">
-          {userEmail}
-        </p>
-
-      </div>
-
-      {/* =================================================
-          FILTER
-      ================================================= */}
-
-      <div className="bg-white rounded-xl shadow mb-6 p-4 sm:p-5">
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-
-          {/* SEARCH */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 
           <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Search
-            </label>
+            <p className="text-sm text-slate-500 mb-1">
+              Issue Management
+            </p>
 
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Issue code atau judul..."
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+              My Issues
+            </h1>
+
+            <p className="text-sm text-slate-500 mt-1">
+              Daftar issue yang kamu buat.
+            </p>
           </div>
 
-          {/* PROJECT */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Project
-            </label>
-
-            <select
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="All">
-                All Project
-              </option>
-
-              {projects.map((project) => (
-                <option
-                  key={project}
-                  value={project}
-                >
-                  {project}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* STATUS */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Status
-            </label>
-
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="All">
-                All Status
-              </option>
-
-              <option value="Open">
-                Open
-              </option>
-
-              <option value="On Progress">
-                On Progress
-              </option>
-
-              <option value="Resolved">
-                Resolved
-              </option>
-
-              <option value="Closed">
-                Closed
-              </option>
-            </select>
-          </div>
-
-          {/* PRIORITY */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Priority
-            </label>
-
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="All">
-                All Priority
-              </option>
-
-              <option value="Critical">
-                Critical
-              </option>
-
-              <option value="High">
-                High
-              </option>
-
-              <option value="Medium">
-                Medium
-              </option>
-
-              <option value="Low">
-                Low
-              </option>
-            </select>
-          </div>
-
-          {/* LOCATION */}
-
-          <div>
-            <label className="block text-sm font-medium text-slate-600 mb-2">
-              Location
-            </label>
-
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="All">
-                All Location
-              </option>
-
-              {locations.map((location) => (
-                <option
-                  key={location}
-                  value={location}
-                >
-                  {location}
-                </option>
-              ))}
-            </select>
-          </div>
-
-        </div>
-
-        {/* RESET */}
-
-        <div className="flex justify-end mt-4 pt-4 border-t border-slate-100">
-
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          <Link
+            href="/issues/create"
+            className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition"
           >
-            Reset Filter
-          </button>
+            + Create Issue
+          </Link>
+
+        </div>
+
+        {/* =================================================
+            USER INFO
+        ================================================= */}
+
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
+
+          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">
+            Logged in as
+          </p>
+
+          <p className="text-sm font-semibold text-blue-900 mt-1 break-all">
+            {userEmail}
+          </p>
+
+        </div>
+
+        {/* =================================================
+            FILTER
+        ================================================= */}
+
+        <div className="bg-white rounded-xl shadow mb-6 p-4 sm:p-5">
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+            {/* SEARCH */}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Search
+              </label>
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Issue code atau judul..."
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* PROJECT */}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Project
+              </label>
+
+              <select
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="All">
+                  All Project
+                </option>
+
+                {projects.map((project) => (
+                  <option
+                    key={project}
+                    value={project}
+                  >
+                    {project}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* STATUS */}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Status
+              </label>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="All">
+                  All Status
+                </option>
+
+                <option value="Open">
+                  Open
+                </option>
+
+                <option value="On Progress">
+                  On Progress
+                </option>
+
+                <option value="Resolved">
+                  Resolved
+                </option>
+
+                <option value="Closed">
+                  Closed
+                </option>
+              </select>
+            </div>
+
+            {/* PRIORITY */}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Priority
+              </label>
+
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="All">
+                  All Priority
+                </option>
+
+                <option value="Critical">
+                  Critical
+                </option>
+
+                <option value="High">
+                  High
+                </option>
+
+                <option value="Medium">
+                  Medium
+                </option>
+
+                <option value="Low">
+                  Low
+                </option>
+              </select>
+            </div>
+
+            {/* LOCATION */}
+
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                Location
+              </label>
+
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="All">
+                  All Location
+                </option>
+
+                {locations.map((location) => (
+                  <option
+                    key={location}
+                    value={location}
+                  >
+                    {location}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+          </div>
+
+          {/* RESET */}
+
+          <div className="flex justify-end mt-4 pt-4 border-t border-slate-100">
+
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Reset Filter
+            </button>
+
+          </div>
 
         </div>
 
