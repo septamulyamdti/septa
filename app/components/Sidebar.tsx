@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,8 +15,13 @@ export default function Sidebar() {
   const router = useRouter();
 
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
   const [loadingUser, setLoadingUser] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const [whatsappNotificationCount, setWhatsappNotificationCount] =
+    useState(0);
 
   // =====================================================
   // GET LOGGED-IN USER
@@ -40,8 +46,11 @@ export default function Sidebar() {
           email: user.email || "",
           name,
         });
+
+        setUserId(user.id);
       } else {
         setUser(null);
+        setUserId(null);
       }
 
       setLoadingUser(false);
@@ -66,8 +75,11 @@ export default function Sidebar() {
             email: authUser.email || "",
             name,
           });
+
+          setUserId(authUser.id);
         } else {
           setUser(null);
+          setUserId(null);
         }
       }
     );
@@ -76,6 +88,211 @@ export default function Sidebar() {
       subscription.unsubscribe();
     };
   }, []);
+
+  // =====================================================
+  // WHATSAPP ISSUE NOTIFICATION
+  // =====================================================
+
+  useEffect(() => {
+    if (!userId) {
+      setWhatsappNotificationCount(0);
+      return;
+    }
+
+    const supabase = createClient();
+
+    let isMounted = true;
+
+    // ===================================================
+    // GET LAST SEEN
+    // ===================================================
+
+    const getLastSeen = async () => {
+      const { data, error } = await supabase
+        .from("issue_notification_reads")
+        .select("last_seen_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error(
+          "GET NOTIFICATION LAST SEEN ERROR:",
+          error
+        );
+
+        return null;
+      }
+
+      return data?.last_seen_at || null;
+    };
+
+    // ===================================================
+    // CREATE / UPDATE LAST SEEN
+    // ===================================================
+
+    const updateLastSeen = async () => {
+      const now = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("issue_notification_reads")
+        .upsert(
+          {
+            user_id: userId,
+            last_seen_at: now,
+          },
+          {
+            onConflict: "user_id",
+          }
+        );
+
+      if (error) {
+        console.error(
+          "UPDATE NOTIFICATION LAST SEEN ERROR:",
+          error
+        );
+      }
+
+      if (isMounted) {
+        setWhatsappNotificationCount(0);
+      }
+    };
+
+    // ===================================================
+    // GET NOTIFICATION COUNT
+    // ===================================================
+
+    const loadNotificationCount = async () => {
+      /*
+       * Jika user sedang berada di All Issues,
+       * otomatis dianggap sudah melihat notification.
+       */
+
+      if (pathname === "/issues" || pathname.startsWith("/issues/")) {
+        await updateLastSeen();
+        return;
+      }
+
+      const lastSeen = await getLastSeen();
+
+      /*
+       * Jika belum pernah ada record last_seen,
+       * gunakan waktu sekarang sebagai titik awal.
+       *
+       * Ini mencegah semua issue WhatsApp lama
+       * tiba-tiba dianggap sebagai notification baru
+       * saat pertama kali fitur ini dipasang.
+       */
+
+      if (!lastSeen) {
+        await updateLastSeen();
+        return;
+      }
+
+      const { count, error } = await supabase
+        .from("issues")
+        .select("id", {
+          count: "exact",
+          head: true,
+        })
+        .eq("source", "WhatsApp")
+        .gt("created_at", lastSeen);
+
+      if (error) {
+        console.error(
+          "GET WHATSAPP NOTIFICATION COUNT ERROR:",
+          error
+        );
+
+        return;
+      }
+
+      if (isMounted) {
+        setWhatsappNotificationCount(count || 0);
+      }
+    };
+
+    loadNotificationCount();
+
+    // ===================================================
+    // REALTIME: NEW WHATSAPP ISSUE
+    // ===================================================
+
+    const channel = supabase
+      .channel(
+        `whatsapp-issue-notifications-${userId}`
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "issues",
+        },
+        (payload) => {
+          const newIssue = payload.new as {
+            id?: number;
+            source?: string;
+            created_at?: string;
+          };
+
+          /*
+           * Hanya issue dengan source WhatsApp
+           * yang boleh menjadi notification.
+           */
+
+          if (
+            newIssue.source !== "WhatsApp"
+          ) {
+            return;
+          }
+
+          /*
+           * Jika user sedang berada di All Issues,
+           * issue langsung dianggap sudah terlihat.
+           */
+
+          if (
+            pathname === "/issues" ||
+            pathname.startsWith("/issues/")
+          ) {
+            return;
+          }
+
+          setWhatsappNotificationCount(
+            (current) => current + 1
+          );
+        }
+      )
+      .subscribe((status) => {
+        console.log(
+          "WHATSAPP ISSUE REALTIME STATUS:",
+          status
+        );
+      });
+
+    // ===================================================
+    // POLLING FALLBACK
+    // ===================================================
+
+    /*
+     * Cek ulang setiap 10 detik.
+     *
+     * Ini menjadi backup apabila Realtime tidak aktif
+     * atau koneksi Realtime terputus.
+     */
+
+    const interval = window.setInterval(() => {
+      loadNotificationCount();
+    }, 10000);
+
+    return () => {
+      isMounted = false;
+
+      window.clearInterval(interval);
+
+      supabase.removeChannel(channel);
+    };
+  }, [userId, pathname]);
 
   // =====================================================
   // LOGOUT
@@ -89,14 +306,21 @@ export default function Sidebar() {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error("Logout error:", error);
+      console.error(
+        "Logout error:",
+        error
+      );
 
-      alert(`Gagal logout: ${error.message}`);
+      alert(
+        `Gagal logout: ${error.message}`
+      );
 
       setLoggingOut(false);
 
       return;
     }
+
+    setWhatsappNotificationCount(0);
 
     router.push("/login");
     router.refresh();
@@ -209,7 +433,11 @@ export default function Sidebar() {
 
         {menuItems.map((item) => {
 
-          const active = isActive(item.href);
+          const active =
+            isActive(item.href);
+
+          const isAllIssues =
+            item.href === "/issues";
 
           return (
             <Link
@@ -226,9 +454,23 @@ export default function Sidebar() {
                 {item.icon}
               </span>
 
-              <span className="font-medium">
+              <span className="font-medium flex-1">
                 {item.name}
               </span>
+
+              {/* =========================================
+                  WHATSAPP NOTIFICATION BADGE
+              ========================================= */}
+
+              {isAllIssues &&
+                whatsappNotificationCount > 0 && (
+                  <span
+                    className="min-w-6 h-6 px-1.5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center shadow-sm"
+                    title={`${whatsappNotificationCount} issue baru dari WhatsApp`}
+                  >
+                    {whatsappNotificationCount}
+                  </span>
+                )}
 
             </Link>
           );
