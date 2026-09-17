@@ -131,12 +131,12 @@ export default function LoginPage() {
 
             <div className="mx-auto w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mb-4 shadow-md">
               <span className="text-white text-2xl font-bold">
-                IM
+                HS
               </span>
             </div>
 
             <h1 className="text-3xl font-bold text-slate-800">
-              Issue Management
+              Helpdesk System
             </h1>
 
             <p className="text-sm text-slate-500 mt-2">
@@ -235,7 +235,7 @@ export default function LoginPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
 
             <p className="text-xs text-slate-400">
-              Issue Management System
+              Helpdesk System
             </p>
 
           </div>
