@@ -1,8 +1,7 @@
 "use client";
-
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 type Issue = {
@@ -22,19 +21,26 @@ type Issue = {
 };
 
 function IssuesPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const statusFromUrl = searchParams.get("status");
+  const priorityFromUrl = searchParams.get("priority");
   const agingFromUrl = searchParams.get("aging");
 
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
+
   const [statusFilter, setStatusFilter] = useState(
     statusFromUrl || "All"
   );
-  const [priorityFilter, setPriorityFilter] = useState("All");
+
+  const [priorityFilter, setPriorityFilter] = useState(
+    priorityFromUrl || "All"
+  );
+
   const [locationFilter, setLocationFilter] = useState("All");
   const [projectFilter, setProjectFilter] = useState("All");
 
@@ -181,7 +187,10 @@ function IssuesPageContent() {
         ascending: false,
       });
 
-    // Filter berdasarkan status dari Dashboard
+    // =====================================================
+    // FILTER STATUS DARI URL
+    // =====================================================
+
     if (
       statusFromUrl &&
       [
@@ -191,13 +200,39 @@ function IssuesPageContent() {
         "Closed",
       ].includes(statusFromUrl)
     ) {
-      query = query.eq("status", statusFromUrl);
+      query = query.eq(
+        "status",
+        statusFromUrl
+      );
+    }
+
+    // =====================================================
+    // FILTER PRIORITY DARI URL
+    // =====================================================
+
+    if (
+      priorityFromUrl &&
+      [
+        "Critical",
+        "High",
+        "Medium",
+        "Low",
+      ].includes(priorityFromUrl)
+    ) {
+      query = query.eq(
+        "priority",
+        priorityFromUrl
+      );
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error("Get issues error:", error);
+      console.error(
+        "Get issues error:",
+        error
+      );
+
       setIssues([]);
     } else {
       setIssues(data || []);
@@ -207,13 +242,24 @@ function IssuesPageContent() {
   };
 
   // =====================================================
-  // FETCH WHEN URL STATUS / AGING CHANGES
+  // FETCH WHEN URL FILTER CHANGES
   // =====================================================
 
   useEffect(() => {
-    setStatusFilter(statusFromUrl || "All");
+    setStatusFilter(
+      statusFromUrl || "All"
+    );
+
+    setPriorityFilter(
+      priorityFromUrl || "All"
+    );
+
     fetchIssues();
-  }, [statusFromUrl, agingFromUrl]);
+  }, [
+    statusFromUrl,
+    priorityFromUrl,
+    agingFromUrl,
+  ]);
 
   // =====================================================
   // STATUS STYLE
@@ -393,20 +439,16 @@ function IssuesPageContent() {
     setLocationFilter("All");
     setProjectFilter("All");
 
-    window.history.replaceState(
-      null,
-      "",
-      "/issues"
-    );
-
-    fetchIssues();
+    router.replace("/issues");
   };
 
   // =====================================================
   // CHANGE STATUS FILTER
   // =====================================================
 
-  const handleStatusChange = (value: string) => {
+  const handleStatusChange = (
+    value: string
+  ) => {
     setStatusFilter(value);
 
     const params = new URLSearchParams();
@@ -418,7 +460,17 @@ function IssuesPageContent() {
       );
     }
 
-    // Tetap pertahankan aging jika sedang aktif
+    // Pertahankan priority jika sedang aktif
+    if (
+      priorityFilter !== "All"
+    ) {
+      params.set(
+        "priority",
+        priorityFilter
+      );
+    }
+
+    // Pertahankan aging jika sedang aktif
     if (
       agingFromUrl === "3" ||
       agingFromUrl === "7" ||
@@ -433,15 +485,62 @@ function IssuesPageContent() {
     const queryString =
       params.toString();
 
-    window.history.replaceState(
-      null,
-      "",
+    router.replace(
       queryString
         ? `/issues?${queryString}`
         : "/issues"
     );
+  };
 
-    fetchIssues();
+  // =====================================================
+  // CHANGE PRIORITY FILTER
+  // =====================================================
+
+  const handlePriorityChange = (
+    value: string
+  ) => {
+    setPriorityFilter(value);
+
+    const params = new URLSearchParams();
+
+    // Pertahankan status jika sedang aktif
+    if (
+      statusFilter !== "All"
+    ) {
+      params.set(
+        "status",
+        statusFilter
+      );
+    }
+
+    // Priority
+    if (value !== "All") {
+      params.set(
+        "priority",
+        value
+      );
+    }
+
+    // Pertahankan aging jika sedang aktif
+    if (
+      agingFromUrl === "3" ||
+      agingFromUrl === "7" ||
+      agingFromUrl === "14"
+    ) {
+      params.set(
+        "aging",
+        agingFromUrl
+      );
+    }
+
+    const queryString =
+      params.toString();
+
+    router.replace(
+      queryString
+        ? `/issues?${queryString}`
+        : "/issues"
+    );
   };
 
   // =====================================================
@@ -466,7 +565,7 @@ function IssuesPageContent() {
     <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
 
       {/* =================================================
-          STICKY HEADER + STATUS + AGING + FILTER
+          STICKY HEADER + STATUS + PRIORITY + AGING + FILTER
       ================================================= */}
 
       <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
@@ -524,6 +623,32 @@ function IssuesPageContent() {
           </div>
         )}
 
+        {/* ACTIVE PRIORITY FROM DASHBOARD */}
+
+        {priorityFromUrl && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+            <div>
+              <p className="text-sm text-red-700 font-medium">
+                Menampilkan issue dengan priority:
+              </p>
+
+              <p className="text-lg font-bold text-red-800">
+                {priorityFromUrl}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-sm font-medium text-red-700 hover:text-red-900"
+            >
+              Tampilkan Semua Issue
+            </button>
+
+          </div>
+        )}
+
         {/* ACTIVE AGING FROM DASHBOARD */}
 
         {(
@@ -571,7 +696,9 @@ function IssuesPageContent() {
                 type="text"
                 value={search}
                 onChange={(e) =>
-                  setSearch(e.target.value)
+                  setSearch(
+                    e.target.value
+                  )
                 }
                 placeholder="Contoh: ISS-0001"
                 className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -600,14 +727,16 @@ function IssuesPageContent() {
                   All Project
                 </option>
 
-                {projects.map((project) => (
-                  <option
-                    key={project}
-                    value={project}
-                  >
-                    {project}
-                  </option>
-                ))}
+                {projects.map(
+                  (project) => (
+                    <option
+                      key={project}
+                      value={project}
+                    >
+                      {project}
+                    </option>
+                  )
+                )}
 
               </select>
             </div>
@@ -661,7 +790,7 @@ function IssuesPageContent() {
               <select
                 value={priorityFilter}
                 onChange={(e) =>
-                  setPriorityFilter(
+                  handlePriorityChange(
                     e.target.value
                   )
                 }
@@ -710,14 +839,16 @@ function IssuesPageContent() {
                   All Location
                 </option>
 
-                {locations.map((location) => (
-                  <option
-                    key={location}
-                    value={location}
-                  >
-                    {location}
-                  </option>
-                ))}
+                {locations.map(
+                  (location) => (
+                    <option
+                      key={location}
+                      value={location}
+                    >
+                      {location}
+                    </option>
+                  )
+                )}
 
               </select>
             </div>
@@ -830,140 +961,234 @@ function IssuesPageContent() {
 
             {/* ROWS */}
 
-            {filteredIssues.map((issue) => (
+            {filteredIssues.map(
+              (issue) => (
 
-              <div
-                key={issue.id}
-                className="border-b last:border-b-0 hover:bg-slate-50 transition"
-              >
+                <div
+                  key={issue.id}
+                  className="border-b last:border-b-0 hover:bg-slate-50 transition"
+                >
 
-                {/* =================================================
-                    DESKTOP
-                ================================================= */}
+                  {/* =================================================
+                      DESKTOP
+                  ================================================= */}
 
-                <div className="hidden lg:grid grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+                  <div className="hidden lg:grid grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
 
-                  {/* ISSUE CODE */}
+                    {/* ISSUE CODE */}
 
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-800 truncate">
-                      {issue.issue_code}
-                    </p>
-                  </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-800 truncate">
+                        {issue.issue_code}
+                      </p>
+                    </div>
 
-                  {/* DATE */}
+                    {/* DATE */}
 
-                  <div>
-                    <p className="text-sm text-slate-600 whitespace-nowrap">
-                      {formatDate(issue.created_at)}
-                    </p>
-                  </div>
+                    <div>
+                      <p className="text-sm text-slate-600 whitespace-nowrap">
+                        {formatDate(
+                          issue.created_at
+                        )}
+                      </p>
+                    </div>
 
-                  {/* PROJECT */}
+                    {/* PROJECT */}
 
-                  <div>
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getProjectClass(
-                        issue.project
-                      )}`}
-                    >
-                      {issue.project || "-"}
-                    </span>
-                  </div>
-
-                  {/* LOCATION */}
-
-                  <div className="min-w-0">
-                    <p
-                      className="text-sm text-slate-700 truncate"
-                      title={issue.location}
-                    >
-                      {issue.location || "-"}
-                    </p>
-                  </div>
-
-                  {/* STATUS */}
-
-                  <div>
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusClass(
-                        issue.status
-                      )}`}
-                    >
-                      {issue.status}
-                    </span>
-                  </div>
-
-                  {/* PRIORITY */}
-
-                  <div>
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPriorityClass(
-                        issue.priority
-                      )}`}
-                    >
-                      {issue.priority}
-                    </span>
-                  </div>
-
-                  {/* ACTION */}
-
-                  <div className="flex justify-end gap-2">
-
-                    <Link
-                      href={`/issues/${issue.id}`}
-                      className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700 transition"
-                    >
-                      View
-                    </Link>
-
-                    <Link
-                      href={`/issues/${issue.id}/edit`}
-                      className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
-                    >
-                      Edit
-                    </Link>
-
-                  </div>
-
-                </div>
-
-                {/* =================================================
-                    TABLET
-                ================================================= */}
-
-                <div className="hidden md:flex lg:hidden items-center justify-between gap-4 px-5 py-4">
-
-                  <div className="min-w-0 flex-1">
-
-                    <p className="font-semibold text-slate-800">
-                      {issue.issue_code}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-3 mt-2">
-
-                      <span className="text-xs text-slate-500">
-                        {formatDate(issue.created_at)}
-                      </span>
-
-                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                    <div>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getProjectClass(
+                          issue.project
+                        )}`}
+                      >
                         {issue.project || "-"}
                       </span>
+                    </div>
 
-                      <span className="text-xs text-slate-500 truncate max-w-[180px]">
-                        {issue.location || "-"}
+                    {/* LOCATION */}
+
+                    <div className="min-w-0">
+                      <p
+                        className="text-sm text-slate-700 truncate"
+                        title={
+                          issue.location
+                        }
+                      >
+                        {issue.location ||
+                          "-"}
+                      </p>
+                    </div>
+
+                    {/* STATUS */}
+
+                    <div>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusClass(
+                          issue.status
+                        )}`}
+                      >
+                        {issue.status}
                       </span>
+                    </div>
+
+                    {/* PRIORITY */}
+
+                    <div>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPriorityClass(
+                          issue.priority
+                        )}`}
+                      >
+                        {issue.priority}
+                      </span>
+                    </div>
+
+                    {/* ACTION */}
+
+                    <div className="flex justify-end gap-2">
+
+                      <Link
+                        href={`/issues/${issue.id}`}
+                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700 transition"
+                      >
+                        View
+                      </Link>
+
+                      <Link
+                        href={`/issues/${issue.id}/edit`}
+                        className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
+                      >
+                        Edit
+                      </Link>
+
+                    </div>
+
+                  </div>
+
+                  {/* =================================================
+                      TABLET
+                  ================================================= */}
+
+                  <div className="hidden md:flex lg:hidden items-center justify-between gap-4 px-5 py-4">
+
+                    <div className="min-w-0 flex-1">
+
+                      <p className="font-semibold text-slate-800">
+                        {issue.issue_code}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3 mt-2">
+
+                        <span className="text-xs text-slate-500">
+                          {formatDate(
+                            issue.created_at
+                          )}
+                        </span>
+
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                          {issue.project ||
+                            "-"}
+                        </span>
+
+                        <span className="text-xs text-slate-500 truncate max-w-[180px]">
+                          {issue.location ||
+                            "-"}
+                        </span>
+
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
+                            issue.status
+                          )}`}
+                        >
+                          {issue.status}
+                        </span>
+
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
+                            issue.priority
+                          )}`}
+                        >
+                          {issue.priority}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <div className="flex gap-2 shrink-0">
+
+                      <Link
+                        href={`/issues/${issue.id}`}
+                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
+                      >
+                        View
+                      </Link>
+
+                      <Link
+                        href={`/issues/${issue.id}/edit`}
+                        className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                      >
+                        Edit
+                      </Link>
+
+                    </div>
+
+                  </div>
+
+                  {/* =================================================
+                      MOBILE
+                  ================================================= */}
+
+                  <div className="md:hidden p-4">
+
+                    <div className="flex items-start justify-between gap-3">
+
+                      <div className="min-w-0">
+
+                        <p className="font-semibold text-slate-800 truncate">
+                          {issue.issue_code}
+                        </p>
+
+                        <p className="text-xs text-slate-500 mt-1">
+                          {formatDate(
+                            issue.created_at
+                          )}
+                        </p>
+
+                      </div>
 
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
                           issue.status
                         )}`}
                       >
                         {issue.status}
                       </span>
 
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-3">
+
+                      <div className="flex flex-wrap items-center gap-2">
+
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
+                            issue.project
+                          )}`}
+                        >
+                          {issue.project ||
+                            "-"}
+                        </span>
+
+                        <span className="text-sm text-slate-600 truncate">
+                          {issue.location ||
+                            "-"}
+                        </span>
+
+                      </div>
+
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
                           issue.priority
                         )}`}
                       >
@@ -972,109 +1197,30 @@ function IssuesPageContent() {
 
                     </div>
 
-                  </div>
+                    <div className="flex gap-2 mt-4">
 
-                  <div className="flex gap-2 shrink-0">
-
-                    <Link
-                      href={`/issues/${issue.id}`}
-                      className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
-                    >
-                      View
-                    </Link>
-
-                    <Link
-                      href={`/issues/${issue.id}/edit`}
-                      className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-                    >
-                      Edit
-                    </Link>
-
-                  </div>
-
-                </div>
-
-                {/* =================================================
-                    MOBILE
-                ================================================= */}
-
-                <div className="md:hidden p-4">
-
-                  <div className="flex items-start justify-between gap-3">
-
-                    <div className="min-w-0">
-
-                      <p className="font-semibold text-slate-800 truncate">
-                        {issue.issue_code}
-                      </p>
-
-                      <p className="text-xs text-slate-500 mt-1">
-                        {formatDate(issue.created_at)}
-                      </p>
-
-                    </div>
-
-                    <span
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                        issue.status
-                      )}`}
-                    >
-                      {issue.status}
-                    </span>
-
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between gap-3">
-
-                    <div className="flex flex-wrap items-center gap-2">
-
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
-                          issue.project
-                        )}`}
+                      <Link
+                        href={`/issues/${issue.id}`}
+                        className="flex-1 text-center px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
                       >
-                        {issue.project || "-"}
-                      </span>
+                        View
+                      </Link>
 
-                      <span className="text-sm text-slate-600 truncate">
-                        {issue.location || "-"}
-                      </span>
+                      <Link
+                        href={`/issues/${issue.id}/edit`}
+                        className="flex-1 text-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                      >
+                        Edit
+                      </Link>
 
                     </div>
-
-                    <span
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
-                        issue.priority
-                      )}`}
-                    >
-                      {issue.priority}
-                    </span>
-
-                  </div>
-
-                  <div className="flex gap-2 mt-4">
-
-                    <Link
-                      href={`/issues/${issue.id}`}
-                      className="flex-1 text-center px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
-                    >
-                      View
-                    </Link>
-
-                    <Link
-                      href={`/issues/${issue.id}/edit`}
-                      className="flex-1 text-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
-                    >
-                      Edit
-                    </Link>
 
                   </div>
 
                 </div>
 
-              </div>
-
-            ))}
+              )
+            )}
 
           </div>
 
