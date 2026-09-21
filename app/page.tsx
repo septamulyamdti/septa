@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -444,7 +445,7 @@ export default function DashboardPage() {
               href="/issues"
               className="bg-white rounded-xl shadow p-4 hover:shadow-md hover:bg-slate-50 transition"
             >
-              <p className="text-xs text-slate-500">
+              <p className="font-semibold text-slate-800">
                 Total Issues
               </p>
 
@@ -463,7 +464,7 @@ export default function DashboardPage() {
               href="/issues?status=Open"
               className="bg-white rounded-xl shadow p-4 hover:shadow-md hover:bg-blue-50 transition"
             >
-              <p className="text-xs text-slate-500">
+              <p className="font-semibold text-slate-800">
                 Open
               </p>
 
@@ -482,7 +483,7 @@ export default function DashboardPage() {
               href="/issues?status=On%20Progress"
               className="bg-white rounded-xl shadow p-4 hover:shadow-md hover:bg-yellow-50 transition"
             >
-              <p className="text-xs text-slate-500">
+              <p className="font-semibold text-slate-800">
                 On Progress
               </p>
 
@@ -501,7 +502,7 @@ export default function DashboardPage() {
               href="/issues?status=Resolved"
               className="bg-white rounded-xl shadow p-4 hover:shadow-md hover:bg-green-50 transition"
             >
-              <p className="text-xs text-slate-500">
+              <p className="font-semibold text-slate-800">
                 Resolved
               </p>
 
@@ -520,7 +521,7 @@ export default function DashboardPage() {
               href="/issues?status=Closed"
               className="bg-white rounded-xl shadow p-4 hover:shadow-md hover:bg-slate-50 transition"
             >
-              <p className="text-xs text-slate-500">
+              <p className="font-semibold text-slate-800">
                 Closed
               </p>
 
@@ -539,7 +540,7 @@ export default function DashboardPage() {
               href="/issues?priority=Critical"
               className="bg-white rounded-xl shadow p-4 hover:shadow-md hover:bg-red-50 transition"
             >
-              <p className="text-xs text-slate-500">
+              <p className="font-semibold text-slate-800">
                 Critical
               </p>
 
@@ -712,27 +713,27 @@ export default function DashboardPage() {
 
                     <tr>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Issue
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Title
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Location
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Priority
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Status
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Age
                       </th>
 
@@ -773,11 +774,15 @@ export default function DashboardPage() {
 
                             </td>
 
-                            <td className="p-3 text-sm">
+                            {/* TITLE - DIPERJELAS */}
+
+                            <td className="p-3 text-sm text-slate-800 font-medium">
                               {issue.title}
                             </td>
 
-                            <td className="p-3 text-sm">
+                            {/* LOCATION - DIPERJELAS */}
+
+                            <td className="p-3 text-sm text-slate-800 font-medium">
                               {issue.location}
                             </td>
 
@@ -1036,27 +1041,27 @@ export default function DashboardPage() {
 
                     <tr>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Issue
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Title
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Location
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Priority
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Status
                       </th>
 
-                      <th className="p-3 text-sm">
+                      <th className="p-3 text-sm font-semibold text-slate-800">
                         Date
                       </th>
 
@@ -1086,11 +1091,15 @@ export default function DashboardPage() {
 
                           </td>
 
-                          <td className="p-3 text-sm">
+                          {/* TITLE - DIPERJELAS */}
+
+                          <td className="p-3 text-sm text-slate-800 font-medium">
                             {issue.title}
                           </td>
 
-                          <td className="p-3 text-sm">
+                          {/* LOCATION - DIPERJELAS */}
+
+                          <td className="p-3 text-sm text-slate-800 font-medium">
                             {issue.location}
                           </td>
 
@@ -1118,7 +1127,9 @@ export default function DashboardPage() {
 
                           </td>
 
-                          <td className="p-3 text-xs text-slate-500">
+                          {/* DATE - DIPERJELAS */}
+
+                          <td className="p-3 text-xs text-slate-700 font-medium">
                             {formatDate(
                               issue.created_at
                             )}

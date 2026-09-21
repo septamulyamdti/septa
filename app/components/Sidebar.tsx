@@ -60,29 +60,27 @@ export default function Sidebar() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          const authUser = session.user;
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const authUser = session.user;
 
-          const name =
-            authUser.user_metadata?.full_name ||
-            authUser.user_metadata?.name ||
-            authUser.email?.split("@")[0] ||
-            "User";
+        const name =
+          authUser.user_metadata?.full_name ||
+          authUser.user_metadata?.name ||
+          authUser.email?.split("@")[0] ||
+          "User";
 
-          setUser({
-            email: authUser.email || "",
-            name,
-          });
+        setUser({
+          email: authUser.email || "",
+          name,
+        });
 
-          setUserId(authUser.id);
-        } else {
-          setUser(null);
-          setUserId(null);
-        }
+        setUserId(authUser.id);
+      } else {
+        setUser(null);
+        setUserId(null);
       }
-    );
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -150,6 +148,8 @@ export default function Sidebar() {
           "UPDATE NOTIFICATION LAST SEEN ERROR:",
           error
         );
+
+        return;
       }
 
       if (isMounted) {
@@ -163,11 +163,18 @@ export default function Sidebar() {
 
     const loadNotificationCount = async () => {
       /*
-       * Jika user sedang berada di All Issues,
-       * otomatis dianggap sudah melihat notification.
+       * HANYA halaman All Issues yang dianggap
+       * sudah melihat notification.
+       *
+       * Penting:
+       * /issues/123
+       * /issues/123/edit
+       * /issues/create
+       *
+       * TIDAK dianggap sebagai All Issues.
        */
 
-      if (pathname === "/issues" || pathname.startsWith("/issues/")) {
+      if (pathname === "/issues") {
         await updateLastSeen();
         return;
       }
@@ -240,21 +247,19 @@ export default function Sidebar() {
            * yang boleh menjadi notification.
            */
 
-          if (
-            newIssue.source !== "WhatsApp"
-          ) {
+          if (newIssue.source !== "WhatsApp") {
             return;
           }
 
           /*
-           * Jika user sedang berada di All Issues,
-           * issue langsung dianggap sudah terlihat.
+           * HANYA jika user sedang berada di
+           * halaman /issues (All Issues),
+           * notification tidak perlu ditambahkan.
+           *
+           * Halaman lain TIDAK menghapus notification.
            */
 
-          if (
-            pathname === "/issues" ||
-            pathname.startsWith("/issues/")
-          ) {
+          if (pathname === "/issues") {
             return;
           }
 
