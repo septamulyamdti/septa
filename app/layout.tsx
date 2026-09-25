@@ -3,8 +3,8 @@ import "./globals.css";
 import ConditionalLayout from "./components/ConditionalLayout";
 
 export const metadata: Metadata = {
-  title: "Issue Management System",
-  description: "Issue and Helpdesk Management System",
+  title: "Helpdesk System",
+  description: "Helpdesk Management System",
 };
 
 export default function RootLayout({
