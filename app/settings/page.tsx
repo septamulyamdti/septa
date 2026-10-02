@@ -130,7 +130,7 @@ export default function SettingsPage() {
                 </p>
 
                 <p className="font-semibold text-slate-800 mt-1">
-                  Issue Management System
+                  Helpdesk System
                 </p>
               </div>
 
@@ -313,7 +313,7 @@ export default function SettingsPage() {
 
             <div>
               <h2 className="font-bold text-slate-800">
-                About Issue Management System
+                About Helpdesk System
               </h2>
 
               <p className="text-sm text-slate-600 mt-1 leading-relaxed">
