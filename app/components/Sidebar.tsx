@@ -468,17 +468,33 @@ export default function Sidebar() {
       "
     >
       {/* =================================================
-          LOGO
+          LOGO / BRAND
       ================================================= */}
 
       <div className="mb-4 shrink-0 px-1">
-        <h1 className="text-lg font-bold tracking-tight">
-          Helpdesk System
-        </h1>
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Helpdesk System Logo"
+            className="
+              h-10
+              w-10
+              shrink-0
+              rounded-lg
+              object-contain
+            "
+          />
 
-        <p className="mt-0.5 text-[11px] text-slate-400">
-          Helpdesk System
-        </p>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-bold tracking-tight">
+              Helpdesk System
+            </h1>
+
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              Helpdesk & Monitoring
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* =================================================
