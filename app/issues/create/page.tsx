@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -394,8 +395,8 @@ export default function CreateIssuePage() {
 
   if (loadingUser) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-5 text-center text-xs text-slate-500">
           Loading user...
         </div>
       </main>
@@ -408,19 +409,30 @@ export default function CreateIssuePage() {
 
   if (!userRole) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center">
-          <p className="text-red-600 font-medium">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+          <p className="text-sm text-red-600 font-medium">
             Data profile user tidak ditemukan.
           </p>
 
-          <p className="text-sm text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 mt-1.5">
             Silakan hubungi administrator.
           </p>
 
           <Link
             href="/login"
-            className="inline-block mt-5 px-5 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="
+              inline-block
+              mt-4
+              px-3
+              py-1.5
+              rounded-md
+              bg-blue-600
+              hover:bg-blue-700
+              text-white
+              text-xs
+              font-medium
+            "
           >
             Kembali ke Login
           </Link>
@@ -438,13 +450,13 @@ export default function CreateIssuePage() {
     !userProject
   ) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center">
-          <p className="text-red-600 font-medium">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+          <p className="text-sm text-red-600 font-medium">
             Project akun belum ditentukan.
           </p>
 
-          <p className="text-sm text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 mt-1.5">
             Silakan hubungi administrator untuk menentukan project akun Anda.
           </p>
         </div>
@@ -457,30 +469,47 @@ export default function CreateIssuePage() {
   // =====================================================
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+    <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
 
       {/* =================================================
           STICKY TOP SECTION
       ================================================= */}
 
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
+      <div
+        className="
+          sticky top-0 z-30
+          -mx-2.5 sm:-mx-3 lg:-mx-4
+          px-2.5 sm:px-3 lg:px-4
+          pt-0 pb-2
+          bg-slate-50
+          rounded-xl
+        "
+      >
 
         {/* =================================================
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-
+        <div
+          className="
+            flex flex-col
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+            gap-2
+            mb-2.5
+          "
+        >
           <div>
-            <p className="text-sm text-slate-500 mb-1">
+            <p className="text-[11px] text-slate-500 mb-0.5">
               Issue Management
             </p>
 
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
+            <h1 className="text-lg sm:text-xl font-bold leading-tight text-slate-800">
               Create New Issue
             </h1>
 
-            <p className="text-slate-500 mt-2">
+            <p className="text-[11px] text-slate-500 mt-0.5">
               Create and report a new issue
             </p>
           </div>
@@ -488,7 +517,21 @@ export default function CreateIssuePage() {
           {userRole === "admin" ? (
             <Link
               href="/issues"
-              className="text-slate-600 hover:text-slate-900"
+              className="
+                inline-flex
+                items-center
+                justify-center
+                px-3
+                py-1.5
+                rounded-md
+                border border-slate-300
+                bg-white
+                hover:bg-slate-100
+                text-[11px]
+                font-medium
+                text-slate-700
+                transition
+              "
             >
               ← Back to Issues
             </Link>
@@ -500,34 +543,57 @@ export default function CreateIssuePage() {
                 router.replace("/login");
                 router.refresh();
               }}
-              className="text-red-600 hover:text-red-700 font-medium"
+              className="
+                inline-flex
+                items-center
+                justify-center
+                px-3
+                py-1.5
+                rounded-md
+                border border-red-200
+                bg-white
+                hover:bg-red-50
+                text-[11px]
+                font-medium
+                text-red-600
+                transition
+              "
             >
               Logout
             </button>
           )}
-
         </div>
 
         {/* =================================================
             REPORTER INFO
         ================================================= */}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
+        <div
+          className="
+            bg-blue-50
+            border border-blue-200
+            rounded-lg
+            px-3
+            py-2
+            mb-2
+          "
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <div>
+              <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">
+                Reporter
+              </p>
 
-          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">
-            Reporter
-          </p>
+              <p className="text-xs font-semibold text-blue-900 mt-0.5">
+                {userEmail}
+              </p>
+            </div>
 
-          <p className="text-sm font-semibold text-blue-900 mt-1">
-            {userEmail}
-          </p>
-
-          <p className="text-xs text-blue-600 mt-1">
-            Reporter otomatis menggunakan akun yang sedang login.
-          </p>
-
+            <p className="text-[10px] text-blue-600">
+              Reporter otomatis menggunakan akun yang sedang login.
+            </p>
+          </div>
         </div>
-
       </div>
 
       {/* =================================================
@@ -536,7 +602,13 @@ export default function CreateIssuePage() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 sm:p-8 rounded-xl shadow space-y-6"
+        className="
+          bg-white
+          p-3 sm:p-4
+          rounded-lg
+          shadow-sm
+          space-y-3
+        "
       >
 
         {/* =================================================
@@ -544,8 +616,7 @@ export default function CreateIssuePage() {
         ================================================= */}
 
         <div>
-
-          <label className="block text-sm font-medium text-slate-800 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Issue Title
           </label>
 
@@ -555,10 +626,24 @@ export default function CreateIssuePage() {
             value={formData.title}
             onChange={handleChange}
             placeholder="Example: Server tidak dapat diakses"
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="
+              w-full
+              h-8
+              border border-slate-300
+              rounded-md
+              px-2.5
+              text-xs
+              font-medium
+              text-slate-800
+              placeholder:text-slate-400
+              bg-white
+              outline-none
+              focus:ring-2
+              focus:ring-blue-500
+              focus:border-blue-500
+            "
             required
           />
-
         </div>
 
         {/* =================================================
@@ -566,8 +651,7 @@ export default function CreateIssuePage() {
         ================================================= */}
 
         <div>
-
-          <label className="block text-sm font-medium text-slate-800 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Description
           </label>
 
@@ -576,24 +660,38 @@ export default function CreateIssuePage() {
             value={formData.description}
             onChange={handleChange}
             placeholder="Jelaskan detail kendala yang ditemukan..."
-            rows={5}
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            rows={4}
+            className="
+              w-full
+              border border-slate-300
+              rounded-md
+              px-2.5
+              py-2
+              text-xs
+              font-medium
+              text-slate-800
+              placeholder:text-slate-400
+              bg-white
+              outline-none
+              resize-y
+              focus:ring-2
+              focus:ring-blue-500
+              focus:border-blue-500
+            "
             required
           />
-
         </div>
 
         {/* =================================================
             CATEGORY & PRIORITY
         ================================================= */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
           {/* CATEGORY */}
 
           <div>
-
-            <label className="block text-sm font-medium text-slate-800 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Category
             </label>
 
@@ -601,10 +699,23 @@ export default function CreateIssuePage() {
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="
+                w-full
+                h-8
+                border border-slate-300
+                rounded-md
+                px-2.5
+                text-xs
+                font-medium
+                text-slate-800
+                bg-white
+                outline-none
+                focus:ring-2
+                focus:ring-blue-500
+                focus:border-blue-500
+              "
               required
             >
-
               <option value="">
                 Select Category
               </option>
@@ -632,16 +743,13 @@ export default function CreateIssuePage() {
               <option value="Other">
                 Other
               </option>
-
             </select>
-
           </div>
 
           {/* PRIORITY */}
 
           <div>
-
-            <label className="block text-sm font-medium text-slate-800 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Priority
             </label>
 
@@ -649,9 +757,22 @@ export default function CreateIssuePage() {
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="
+                w-full
+                h-8
+                border border-slate-300
+                rounded-md
+                px-2.5
+                text-xs
+                font-medium
+                text-slate-800
+                bg-white
+                outline-none
+                focus:ring-2
+                focus:ring-blue-500
+                focus:border-blue-500
+              "
             >
-
               <option value="Low">
                 Low
               </option>
@@ -667,24 +788,20 @@ export default function CreateIssuePage() {
               <option value="Critical">
                 Critical
               </option>
-
             </select>
-
           </div>
-
         </div>
 
         {/* =================================================
             PROJECT & LOCATION
         ================================================= */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
           {/* PROJECT */}
 
           <div>
-
-            <label className="block text-sm font-medium text-slate-800 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Project
             </label>
 
@@ -694,10 +811,20 @@ export default function CreateIssuePage() {
                   type="text"
                   value={formData.project}
                   disabled
-                  className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-700 bg-slate-100"
+                  className="
+                    w-full
+                    h-8
+                    border border-slate-300
+                    rounded-md
+                    px-2.5
+                    text-xs
+                    font-medium
+                    text-slate-700
+                    bg-slate-100
+                  "
                 />
 
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-[10px] text-slate-500 mt-1">
                   Project otomatis berdasarkan project akun Anda.
                 </p>
               </>
@@ -706,10 +833,23 @@ export default function CreateIssuePage() {
                 name="project"
                 value={formData.project}
                 onChange={handleChange}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
                 required
               >
-
                 <option value="">
                   Select Project
                 </option>
@@ -722,17 +862,14 @@ export default function CreateIssuePage() {
                     {project}
                   </option>
                 ))}
-
               </select>
             )}
-
           </div>
 
           {/* LOCATION */}
 
           <div>
-
-            <label className="block text-sm font-medium text-slate-800 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Location
             </label>
 
@@ -741,10 +878,25 @@ export default function CreateIssuePage() {
               value={formData.location}
               onChange={handleChange}
               disabled={!formData.project}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
+              className="
+                w-full
+                h-8
+                border border-slate-300
+                rounded-md
+                px-2.5
+                text-xs
+                font-medium
+                text-slate-800
+                bg-white
+                outline-none
+                focus:ring-2
+                focus:ring-blue-500
+                focus:border-blue-500
+                disabled:bg-slate-100
+                disabled:text-slate-500
+              "
               required
             >
-
               <option value="">
                 {formData.project
                   ? "Select Location"
@@ -761,11 +913,10 @@ export default function CreateIssuePage() {
                   </option>
                 )
               )}
-
             </select>
 
             {formData.project && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 mt-1">
                 Location hanya menampilkan lokasi yang sesuai dengan project{" "}
                 <span className="font-medium">
                   {formData.project}
@@ -773,9 +924,7 @@ export default function CreateIssuePage() {
                 .
               </p>
             )}
-
           </div>
-
         </div>
 
         {/* =================================================
@@ -785,8 +934,7 @@ export default function CreateIssuePage() {
 
         {userRole === "admin" && (
           <div>
-
-            <label className="block text-sm font-medium text-slate-800 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Assignee
             </label>
 
@@ -794,10 +942,23 @@ export default function CreateIssuePage() {
               name="assignee"
               value={formData.assignee}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="
+                w-full
+                h-8
+                border border-slate-300
+                rounded-md
+                px-2.5
+                text-xs
+                font-medium
+                text-slate-800
+                bg-white
+                outline-none
+                focus:ring-2
+                focus:ring-blue-500
+                focus:border-blue-500
+              "
               required
             >
-
               <option value="">
                 Select Assignee
               </option>
@@ -814,20 +975,34 @@ export default function CreateIssuePage() {
                 Rizqy F Akbar
               </option>
 
-              <option value="Pak Zandi">
-                Pak Zandi
+              <option value="Alung">
+                Alung
               </option>
 
-              <option value="Pak Alex">
-                Pak Alex
+              <option value="Syahrul">
+                syahrul
               </option>
 
-              <option value="Pak Bona">
-                Pak Bona
+              <option value="Hagi">
+                Hagi
               </option>
 
+              <option value="Sadam">
+                Sadam
+              </option>
+
+              <option value="Fadil">
+                Fadil
+              </option>
+
+              <option value="Ino">
+                Ino
+              </option>
+
+              <option value="Wildan">
+                Wildan
+              </option>
             </select>
-
           </div>
         )}
 
@@ -836,39 +1011,66 @@ export default function CreateIssuePage() {
         ================================================= */}
 
         <div>
-
-          <label className="block text-sm font-medium text-slate-800 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Status
           </label>
 
           <select
             name="status"
             value={formData.status}
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-700 bg-slate-100"
+            className="
+              w-full
+              h-8
+              border border-slate-300
+              rounded-md
+              px-2.5
+              text-xs
+              font-medium
+              text-slate-700
+              bg-slate-100
+            "
             disabled
           >
-
             <option value="Open">
               Open
             </option>
-
           </select>
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[10px] text-slate-500 mt-1">
             Issue baru selalu dibuat dengan status Open.
           </p>
-
         </div>
 
         {/* =================================================
             BUTTONS
         ================================================= */}
 
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 sm:gap-4 pt-4 border-t border-slate-100">
-
+        <div
+          className="
+            flex
+            flex-col-reverse
+            sm:flex-row
+            justify-end
+            gap-2
+            pt-3
+            border-t
+            border-slate-100
+          "
+        >
           <Link
             href="/issues"
-            className="px-5 py-3 rounded-lg border border-slate-300 hover:bg-slate-100 text-center text-slate-700 font-medium transition"
+            className="
+              px-3
+              py-1.5
+              rounded-md
+              border border-slate-300
+              hover:bg-slate-100
+              text-center
+              text-[11px]
+              font-medium
+              text-slate-700
+              transition
+            "
           >
             Cancel
           </Link>
@@ -876,17 +1078,25 @@ export default function CreateIssuePage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-3 rounded-lg transition font-medium"
+            className="
+              px-3
+              py-1.5
+              rounded-md
+              bg-blue-600
+              hover:bg-blue-700
+              disabled:bg-blue-300
+              text-white
+              text-[11px]
+              font-medium
+              transition
+            "
           >
             {loading
               ? "Creating..."
               : "Create Issue"}
           </button>
-
         </div>
-
       </form>
-
     </main>
   );
 }

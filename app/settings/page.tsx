@@ -3,64 +3,71 @@ import Link from "next/link";
 
 export default function SettingsPage() {
   return (
-    <main className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <main className="p-2.5 sm:p-3 lg:p-4 max-w-7xl mx-auto">
       {/* =================================================
           HEADER
       ================================================= */}
 
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-8">
-        <div>
-          <p className="text-sm text-slate-500 mb-1">
-            System Configuration
-          </p>
+      <div className="sticky top-0 z-30 -mx-2.5 sm:-mx-3 lg:-mx-4 px-2.5 sm:px-3 lg:px-4 pt-0 pb-2 bg-slate-50">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 
-          <h1 className="text-3xl font-bold text-slate-800">
-            Settings
-          </h1>
+          <div className="min-w-0">
+            <p className="text-[10px] text-slate-500">
+              System Configuration
+            </p>
 
-          <p className="text-slate-500 mt-1">
-            Manage your account and application settings
-          </p>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-800">
+              Settings
+            </h1>
+
+            <p className="text-[11px] text-slate-500">
+              Manage your account and application settings
+            </p>
+          </div>
+
+          <Link
+            href="/"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
+          >
+            ← Back to Dashboard
+          </Link>
+
         </div>
-
-        <Link
-          href="/"
-          className="px-4 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-sm text-slate-700 transition"
-        >
-          ← Back to Dashboard
-        </Link>
       </div>
 
       {/* =================================================
           CONTENT
       ================================================= */}
 
-      <div className="space-y-6">
+      <div className="space-y-2.5">
+
         {/* =================================================
             PROFILE
         ================================================= */}
 
-        <section className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-800">
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+
+          <div className="border-b border-slate-200 px-3 py-2.5">
+            <h2 className="text-sm font-bold text-slate-800">
               Profile
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               User information for the current account
             </p>
           </div>
 
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+
               {/* NAME */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Name
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Septa Mulya
                 </p>
               </div>
@@ -68,11 +75,11 @@ export default function SettingsPage() {
               {/* ROLE */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Role
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Administrator
                 </p>
               </div>
@@ -80,11 +87,11 @@ export default function SettingsPage() {
               {/* EMAIL */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Email
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Not configured
                 </p>
               </div>
@@ -92,15 +99,16 @@ export default function SettingsPage() {
               {/* ACCOUNT STATUS */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Account Status
                 </p>
 
-                <span className="inline-flex items-center gap-2 mt-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                   Active
                 </span>
               </div>
+
             </div>
           </div>
         </section>
@@ -109,27 +117,29 @@ export default function SettingsPage() {
             APPLICATION
         ================================================= */}
 
-        <section className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-800">
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+
+          <div className="border-b border-slate-200 px-3 py-2.5">
+            <h2 className="text-sm font-bold text-slate-800">
               Application
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               General information about this application
             </p>
           </div>
 
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+
               {/* APPLICATION NAME */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Application Name
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Helpdesk System
                 </p>
               </div>
@@ -137,11 +147,11 @@ export default function SettingsPage() {
               {/* VERSION */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Version
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   1.0.0
                 </p>
               </div>
@@ -149,16 +159,17 @@ export default function SettingsPage() {
               {/* DESCRIPTION */}
 
               <div className="md:col-span-2">
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Description
                 </p>
 
-                <p className="text-slate-700 mt-1">
+                <p className="mt-0.5 text-xs leading-5 text-slate-700">
                   Issue and Helpdesk Management System
                   untuk monitoring, tracking, dan
                   penyelesaian issue.
                 </p>
               </div>
+
             </div>
           </div>
         </section>
@@ -167,27 +178,29 @@ export default function SettingsPage() {
             APPEARANCE
         ================================================= */}
 
-        <section className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-800">
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+
+          <div className="border-b border-slate-200 px-3 py-2.5">
+            <h2 className="text-sm font-bold text-slate-800">
               Appearance
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               Current application appearance settings
             </p>
           </div>
 
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+
               {/* FONT */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Font
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Century Gothic
                 </p>
               </div>
@@ -195,11 +208,11 @@ export default function SettingsPage() {
               {/* THEME */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Theme
                 </p>
 
-                <span className="inline-flex items-center mt-1 px-3 py-1 rounded-full text-sm font-medium bg-slate-100 text-slate-700">
+                <span className="mt-0.5 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
                   Light
                 </span>
               </div>
@@ -207,11 +220,11 @@ export default function SettingsPage() {
               {/* UI STYLE */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Interface Style
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Clean & Professional
                 </p>
               </div>
@@ -219,15 +232,16 @@ export default function SettingsPage() {
               {/* STATUS */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Appearance Status
                 </p>
 
-                <span className="inline-flex items-center gap-2 mt-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                   Active
                 </span>
               </div>
+
             </div>
           </div>
         </section>
@@ -236,27 +250,29 @@ export default function SettingsPage() {
             SYSTEM INFORMATION
         ================================================= */}
 
-        <section className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="p-6 border-b border-slate-200">
-            <h2 className="text-xl font-bold text-slate-800">
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+
+          <div className="border-b border-slate-200 px-3 py-2.5">
+            <h2 className="text-sm font-bold text-slate-800">
               System Information
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="mt-0.5 text-[11px] text-slate-500">
               Technical information about the application
             </p>
           </div>
 
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+
               {/* DATABASE */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Database
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Supabase
                 </p>
               </div>
@@ -264,11 +280,11 @@ export default function SettingsPage() {
               {/* FRAMEWORK */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Framework
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   Next.js
                 </p>
               </div>
@@ -276,11 +292,11 @@ export default function SettingsPage() {
               {/* FRONTEND */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Frontend
                 </p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-0.5 text-xs font-semibold text-slate-800">
                   React + Tailwind CSS
                 </p>
               </div>
@@ -288,15 +304,16 @@ export default function SettingsPage() {
               {/* SYSTEM STATUS */}
 
               <div>
-                <p className="text-sm text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   System Status
                 </p>
 
-                <span className="inline-flex items-center gap-2 mt-1 px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                   Operational
                 </span>
               </div>
+
             </div>
           </div>
         </section>
@@ -305,26 +322,33 @@ export default function SettingsPage() {
             INFORMATION
         ================================================= */}
 
-        <section className="bg-slate-50 border border-slate-200 rounded-xl p-6">
-          <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">
+        <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+
+          <div className="flex gap-2.5">
+
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
               i
             </div>
 
-            <div>
-              <h2 className="font-bold text-slate-800">
+            <div className="min-w-0">
+
+              <h2 className="text-xs font-bold text-slate-800">
                 About Helpdesk System
               </h2>
 
-              <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+              <p className="mt-0.5 text-[11px] leading-5 text-slate-600">
                 Sistem ini digunakan untuk mencatat,
                 memonitor, dan mengelola issue dari
                 proses pelaporan sampai issue selesai
                 dan ditutup.
               </p>
+
             </div>
+
           </div>
+
         </section>
+
       </div>
     </main>
   );

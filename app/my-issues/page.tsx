@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -51,6 +52,79 @@ export default function MyIssuesPage() {
   ];
 
   // =====================================================
+  // PROJECT & LOCATION MAPPING
+  // =====================================================
+
+  const PROJECT_LOCATIONS: Record<string, string[]> = {
+    TAM: [
+      "NVDC Karawang",
+      "NVDC Sunter",
+      "NVDC Cibitung",
+    ],
+
+    BPKB: [
+      "Kepri",
+      "Riau",
+      "Sulut",
+      "Sulteng",
+      "Sulsel",
+      "Sultra",
+      "Bulukumba",
+      "Kalteng",
+      "Kalsel",
+      "Sumenep",
+      "Jogja",
+    ],
+
+    STNK: [
+      "Lampung",
+      "Jabar",
+    ],
+
+    LMS: [
+      "BACY",
+    ],
+
+    Hyundai: [
+      "Hyundai Cikarang",
+    ],
+
+    Mahindra: [
+      "Mahindra Cikarang",
+    ],
+  };
+
+  // =====================================================
+  // NORMALIZE LOCATION
+  // =====================================================
+
+  const normalizeLocation = (value?: string) => {
+    return (value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  };
+
+  // =====================================================
+  // DISPLAY LOCATION
+  // =====================================================
+
+  const getDisplayLocation = (location?: string) => {
+    const normalized = normalizeLocation(location);
+
+    const masterLocation = Object.values(
+      PROJECT_LOCATIONS
+    )
+      .flat()
+      .find(
+        (master) =>
+          normalizeLocation(master) === normalized
+      );
+
+    return masterLocation || location?.trim() || "-";
+  };
+
+  // =====================================================
   // GET LOGGED-IN USER
   // =====================================================
 
@@ -99,9 +173,14 @@ export default function MyIssuesPage() {
         });
 
       if (error) {
-        console.error("Get my issues error:", error);
+        console.error(
+          "Get my issues error:",
+          error
+        );
 
-        alert(`Gagal mengambil My Issues: ${error.message}`);
+        alert(
+          `Gagal mengambil My Issues: ${error.message}`
+        );
 
         setIssues([]);
       } else {
@@ -164,7 +243,9 @@ export default function MyIssuesPage() {
   // PROJECT STYLE
   // =====================================================
 
-  const getProjectClass = (project?: string | null) => {
+  const getProjectClass = (
+    project?: string | null
+  ) => {
     switch (project) {
       case "TAM":
         return "bg-blue-100 text-blue-700";
@@ -198,11 +279,14 @@ export default function MyIssuesPage() {
       return "-";
     }
 
-    return new Date(date).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      "id-ID",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
   // =====================================================
@@ -210,15 +294,45 @@ export default function MyIssuesPage() {
   // =====================================================
 
   const locations = useMemo(() => {
-    const uniqueLocations = Array.from(
-      new Set(
-        issues
-          .map((issue) => issue.location)
-          .filter(Boolean)
-      )
-    );
+    const uniqueLocations =
+      new Map<string, string>();
 
-    return uniqueLocations.sort();
+    issues
+      .map((issue) => issue.location)
+      .filter(Boolean)
+      .forEach((location) => {
+        const normalized =
+          normalizeLocation(location);
+
+        if (!normalized) {
+          return;
+        }
+
+        const masterLocation =
+          Object.values(PROJECT_LOCATIONS)
+            .flat()
+            .find(
+              (master) =>
+                normalizeLocation(master) ===
+                normalized
+            );
+
+        const displayLocation =
+          masterLocation || location.trim();
+
+        if (!uniqueLocations.has(normalized)) {
+          uniqueLocations.set(
+            normalized,
+            displayLocation
+          );
+        }
+      });
+
+    return Array.from(
+      uniqueLocations.values()
+    ).sort((a, b) =>
+      a.localeCompare(b)
+    );
   }, [issues]);
 
   // =====================================================
@@ -226,7 +340,8 @@ export default function MyIssuesPage() {
   // =====================================================
 
   const filteredIssues = issues.filter((issue) => {
-    const searchValue = search.toLowerCase().trim();
+    const searchValue =
+      search.toLowerCase().trim();
 
     const searchMatch =
       searchValue === "" ||
@@ -247,7 +362,8 @@ export default function MyIssuesPage() {
 
     const locationMatch =
       locationFilter === "All" ||
-      issue.location === locationFilter;
+      normalizeLocation(issue.location) ===
+        normalizeLocation(locationFilter);
 
     const projectMatch =
       projectFilter === "All" ||
@@ -280,8 +396,8 @@ export default function MyIssuesPage() {
 
   if (loading) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-4 text-center text-xs text-slate-500">
           Loading user...
         </div>
       </main>
@@ -293,94 +409,170 @@ export default function MyIssuesPage() {
   // =====================================================
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <main className="p-2.5 sm:p-3 lg:p-4 max-w-7xl mx-auto">
 
       {/* =================================================
           STICKY TOP SECTION
       ================================================= */}
 
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
+      <div
+        className="
+          sticky top-0 z-30
+          -mx-2.5 sm:-mx-3 lg:-mx-4
+          px-2.5 sm:px-3 lg:px-4
+          pt-0 pb-2
+          bg-slate-50
+          rounded-xl
+        "
+      >
 
         {/* =================================================
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-
+        <div
+          className="
+            flex flex-col
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+            gap-2
+            mb-2.5
+          "
+        >
           <div>
-            <p className="text-sm text-slate-500 mb-1">
+            <p className="text-[11px] text-slate-500 mb-0.5">
               Issue Management
             </p>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+            <h1 className="text-lg sm:text-xl font-bold leading-tight text-slate-800">
               My Issues
             </h1>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 mt-0.5">
               Daftar issue yang kamu buat.
             </p>
           </div>
 
           <Link
             href="/issues/create"
-            className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition"
+            className="
+              inline-flex
+              items-center
+              justify-center
+              px-3
+              py-1.5
+              rounded-md
+              bg-blue-600
+              hover:bg-blue-700
+              text-white
+              text-xs
+              font-medium
+              transition
+            "
           >
             + Create Issue
           </Link>
-
         </div>
 
         {/* =================================================
             USER INFO
         ================================================= */}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6">
+        <div
+          className="
+            bg-blue-50
+            border border-blue-200
+            rounded-lg
+            px-3
+            py-2
+            mb-2
+          "
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <div>
+              <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">
+                Logged in as
+              </p>
 
-          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">
-            Logged in as
-          </p>
-
-          <p className="text-sm font-semibold text-blue-900 mt-1 break-all">
-            {userEmail}
-          </p>
-
+              <p className="text-xs font-semibold text-blue-900 mt-0.5 break-all">
+                {userEmail}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* =================================================
             FILTER
         ================================================= */}
 
-        <div className="bg-white rounded-xl shadow mb-6 p-4 sm:p-5">
+        <div className="bg-white rounded-lg shadow-sm p-2.5 sm:p-3">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
 
             {/* SEARCH */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Search
               </label>
 
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
                 placeholder="Issue code atau judul..."
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  placeholder:text-slate-400
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               />
             </div>
 
             {/* PROJECT */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Project
               </label>
 
               <select
                 value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(e) => {
+                  setProjectFilter(
+                    e.target.value
+                  );
+                  setLocationFilter("All");
+                }}
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Project
@@ -400,14 +592,32 @@ export default function MyIssuesPage() {
             {/* STATUS */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Status
               </label>
 
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(e) =>
+                  setStatusFilter(
+                    e.target.value
+                  )
+                }
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Status
@@ -434,14 +644,32 @@ export default function MyIssuesPage() {
             {/* PRIORITY */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Priority
               </label>
 
               <select
                 value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(e) =>
+                  setPriorityFilter(
+                    e.target.value
+                  )
+                }
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Priority
@@ -468,14 +696,32 @@ export default function MyIssuesPage() {
             {/* LOCATION */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Location
               </label>
 
               <select
                 value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onChange={(e) =>
+                  setLocationFilter(
+                    e.target.value
+                  )
+                }
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Location
@@ -491,45 +737,43 @@ export default function MyIssuesPage() {
                 ))}
               </select>
             </div>
-
           </div>
 
           {/* RESET */}
 
-          <div className="flex justify-end mt-4 pt-4 border-t border-slate-100">
-
+          <div className="flex justify-end mt-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={resetFilters}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="
+                text-[11px]
+                text-blue-600
+                hover:text-blue-700
+                font-medium
+              "
             >
               Reset Filter
             </button>
-
           </div>
-
         </div>
-
       </div>
 
       {/* =================================================
           ISSUE LIST
       ================================================= */}
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
 
         {/* HEADER */}
 
-        <div className="px-4 sm:px-6 py-4 border-b bg-slate-50">
-
-          <h2 className="font-bold text-slate-800">
+        <div className="px-4 py-2.5 border-b bg-slate-50">
+          <h2 className="text-xs font-bold text-slate-800">
             My Issue List
           </h2>
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[11px] text-slate-500 mt-0.5">
             {filteredIssues.length} issue ditemukan
           </p>
-
         </div>
 
         {/* =================================================
@@ -537,38 +781,47 @@ export default function MyIssuesPage() {
         ================================================= */}
 
         {loadingIssues ? (
-
-          <div className="p-10 text-center text-slate-500">
+          <div className="p-6 text-center text-xs text-slate-500">
             Loading your issues...
           </div>
-
         ) : filteredIssues.length === 0 ? (
 
           /* =================================================
              EMPTY
           ================================================= */
 
-          <div className="p-10 text-center">
+          <div className="p-6 text-center">
 
-            <div className="text-4xl mb-3">
+            <div className="text-2xl mb-1.5">
               📋
             </div>
 
-            <h3 className="font-semibold text-slate-700">
+            <h3 className="text-xs font-semibold text-slate-700">
               Belum ada issue
             </h3>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 mt-1">
               Belum ada issue yang dibuat menggunakan akun ini.
             </p>
 
             <Link
               href="/issues/create"
-              className="inline-flex mt-4 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
+              className="
+                inline-flex
+                mt-2
+                px-3
+                py-1.5
+                rounded-md
+                bg-blue-600
+                hover:bg-blue-700
+                text-white
+                text-[11px]
+                font-medium
+                transition
+              "
             >
               + Create Issue
             </Link>
-
           </div>
 
         ) : (
@@ -579,36 +832,30 @@ export default function MyIssuesPage() {
                 DESKTOP HEADER
             ================================================= */}
 
-            <div className="hidden lg:grid grid-cols-[1.35fr_1fr_1.1fr_1.2fr_1.1fr_1fr_150px] gap-4 px-6 py-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
-
-              <div>
-                Issue Code
-              </div>
-
-              <div>
-                Date
-              </div>
-
-              <div>
-                Project
-              </div>
-
-              <div>
-                Location
-              </div>
-
-              <div>
-                Current Status
-              </div>
-
-              <div>
-                Priority
-              </div>
-
+            <div
+              className="
+                hidden lg:grid
+                grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_135px]
+                gap-2
+                px-4
+                py-2
+                bg-slate-50
+                border-b
+                text-[10px]
+                font-semibold
+                text-slate-500
+                uppercase
+              "
+            >
+              <div>Issue Code</div>
+              <div>Date</div>
+              <div>Project</div>
+              <div>Location</div>
+              <div>Current Status</div>
+              <div>Priority</div>
               <div className="text-right">
                 Action
               </div>
-
             </div>
 
             {/* =================================================
@@ -616,305 +863,437 @@ export default function MyIssuesPage() {
             ================================================= */}
 
             {filteredIssues.map((issue) => (
-
               <div
                 key={issue.id}
-                className="border-b last:border-b-0 hover:bg-slate-50 transition"
+                className="
+                  border-b
+                  last:border-b-0
+                  hover:bg-slate-50
+                  transition
+                "
               >
 
                 {/* =================================================
                     DESKTOP
                 ================================================= */}
 
-                <div className="hidden lg:grid grid-cols-[1.35fr_1fr_1.1fr_1.2fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+                <div
+                  className="
+                    hidden lg:grid
+                    grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_135px]
+                    gap-2
+                    items-center
+                    px-4
+                    py-2
+                  "
+                >
 
                   {/* ISSUE CODE */}
 
                   <div className="min-w-0">
-
-                    <p className="font-semibold text-slate-800 truncate">
+                    <p className="text-xs font-semibold text-slate-800 truncate">
                       {issue.issue_code}
                     </p>
 
                     <p
-                      className="text-xs text-slate-500 truncate mt-1"
+                      className="text-[10px] text-slate-500 truncate mt-0.5"
                       title={issue.title}
                     >
                       {issue.title}
                     </p>
-
                   </div>
 
                   {/* DATE */}
 
                   <div>
-
-                    <p className="text-sm text-slate-600 whitespace-nowrap">
-                      {formatDate(issue.created_at)}
+                    <p className="text-[11px] text-slate-600 whitespace-nowrap">
+                      {formatDate(
+                        issue.created_at
+                      )}
                     </p>
-
                   </div>
 
                   {/* PROJECT */}
 
                   <div>
-
                     <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getProjectClass(
-                        issue.project
-                      )}`}
+                      className={`
+                        inline-flex
+                        px-2
+                        py-0.5
+                        rounded-full
+                        text-[10px]
+                        font-semibold
+                        whitespace-nowrap
+                        ${getProjectClass(
+                          issue.project
+                        )}
+                      `}
                     >
                       {issue.project || "-"}
                     </span>
-
                   </div>
 
                   {/* LOCATION */}
 
                   <div className="min-w-0">
-
                     <p
-                      className="text-sm text-slate-700 truncate"
+                      className="
+                        text-[11px]
+                        text-slate-700
+                        truncate
+                      "
                       title={issue.location}
                     >
-                      {issue.location || "-"}
+                      {getDisplayLocation(
+                        issue.location
+                      )}
                     </p>
-
                   </div>
 
                   {/* STATUS */}
 
                   <div>
-
                     <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusClass(
-                        issue.status
-                      )}`}
+                      className={`
+                        inline-flex
+                        px-2
+                        py-0.5
+                        rounded-full
+                        text-[10px]
+                        font-semibold
+                        whitespace-nowrap
+                        ${getStatusClass(
+                          issue.status
+                        )}
+                      `}
                     >
                       {issue.status}
                     </span>
-
                   </div>
 
                   {/* PRIORITY */}
 
                   <div>
-
                     <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPriorityClass(
-                        issue.priority
-                      )}`}
+                      className={`
+                        inline-flex
+                        px-2
+                        py-0.5
+                        rounded-full
+                        text-[10px]
+                        font-semibold
+                        whitespace-nowrap
+                        ${getPriorityClass(
+                          issue.priority
+                        )}
+                      `}
                     >
                       {issue.priority}
                     </span>
-
                   </div>
 
                   {/* ACTION */}
 
-                  <div className="flex justify-end gap-2">
-
+                  <div className="flex justify-end gap-1">
                     <Link
                       href={`/issues/${issue.id}`}
-                      className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700 transition"
+                      className="
+                        px-2
+                        py-1
+                        rounded-md
+                        border border-slate-300
+                        bg-white
+                        hover:bg-slate-100
+                        text-[11px]
+                        font-medium
+                        text-slate-700
+                        transition
+                      "
                     >
                       View
                     </Link>
 
                     <Link
                       href={`/issues/${issue.id}/edit`}
-                      className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
+                      className="
+                        px-2
+                        py-1
+                        rounded-md
+                        bg-blue-600
+                        hover:bg-blue-700
+                        text-white
+                        text-[11px]
+                        font-medium
+                        transition
+                      "
                     >
                       Edit
                     </Link>
-
                   </div>
-
                 </div>
 
                 {/* =================================================
                     TABLET
                 ================================================= */}
 
-                <div className="hidden md:flex lg:hidden items-center justify-between gap-4 px-5 py-4">
-
+                <div
+                  className="
+                    hidden md:flex lg:hidden
+                    items-center
+                    justify-between
+                    gap-2
+                    px-3
+                    py-2.5
+                  "
+                >
                   <div className="min-w-0 flex-1">
 
-                    <p className="font-semibold text-slate-800">
+                    <p className="text-xs font-semibold text-slate-800">
                       {issue.issue_code}
                     </p>
 
                     <p
-                      className="text-xs text-slate-500 truncate mt-1"
+                      className="text-[10px] text-slate-500 truncate mt-0.5"
                       title={issue.title}
                     >
                       {issue.title}
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-3 mt-2">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
 
-                      <span className="text-xs text-slate-500">
-                        {formatDate(issue.created_at)}
+                      <span className="text-[10px] text-slate-500">
+                        {formatDate(
+                          issue.created_at
+                        )}
                       </span>
 
-                      {/* PROJECT */}
-
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
-                          issue.project
-                        )}`}
+                        className={`
+                          px-1.5
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          ${getProjectClass(
+                            issue.project
+                          )}
+                        `}
                       >
                         {issue.project || "-"}
                       </span>
 
-                      {/* LOCATION */}
-
-                      <span className="text-xs text-slate-500 truncate max-w-[180px]">
-                        {issue.location || "-"}
+                      <span className="text-[10px] text-slate-500 truncate max-w-[180px]">
+                        {getDisplayLocation(
+                          issue.location
+                        )}
                       </span>
 
-                      {/* STATUS */}
-
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                          issue.status
-                        )}`}
+                        className={`
+                          px-1.5
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          ${getStatusClass(
+                            issue.status
+                          )}
+                        `}
                       >
                         {issue.status}
                       </span>
 
-                      {/* PRIORITY */}
-
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
-                          issue.priority
-                        )}`}
+                        className={`
+                          px-1.5
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          ${getPriorityClass(
+                            issue.priority
+                          )}
+                        `}
                       >
                         {issue.priority}
                       </span>
-
                     </div>
-
                   </div>
 
-                  <div className="flex gap-2 shrink-0">
-
+                  <div className="flex gap-1 shrink-0">
                     <Link
                       href={`/issues/${issue.id}`}
-                      className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
+                      className="
+                        px-2
+                        py-1
+                        rounded-md
+                        border border-slate-300
+                        bg-white
+                        hover:bg-slate-100
+                        text-[11px]
+                        font-medium
+                        text-slate-700
+                      "
                     >
                       View
                     </Link>
 
                     <Link
                       href={`/issues/${issue.id}/edit`}
-                      className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                      className="
+                        px-2
+                        py-1
+                        rounded-md
+                        bg-blue-600
+                        hover:bg-blue-700
+                        text-white
+                        text-[11px]
+                        font-medium
+                      "
                     >
                       Edit
                     </Link>
-
                   </div>
-
                 </div>
 
                 {/* =================================================
                     MOBILE
                 ================================================= */}
 
-                <div className="md:hidden p-4">
+                <div className="md:hidden p-2.5">
 
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
 
                     <div className="min-w-0">
 
-                      <p className="font-semibold text-slate-800 truncate">
+                      <p className="text-xs font-semibold text-slate-800 truncate">
                         {issue.issue_code}
                       </p>
 
                       <p
-                        className="text-xs text-slate-500 mt-1 truncate"
+                        className="text-[10px] text-slate-500 mt-0.5 truncate"
                         title={issue.title}
                       >
                         {issue.title}
                       </p>
 
-                      <p className="text-xs text-slate-500 mt-1">
-                        {formatDate(issue.created_at)}
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {formatDate(
+                          issue.created_at
+                        )}
                       </p>
-
                     </div>
 
                     <span
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                        issue.status
-                      )}`}
+                      className={`
+                        shrink-0
+                        px-1.5
+                        py-0.5
+                        rounded-full
+                        text-[10px]
+                        font-semibold
+                        ${getStatusClass(
+                          issue.status
+                        )}
+                      `}
                     >
                       {issue.status}
                     </span>
-
                   </div>
 
                   {/* PROJECT + LOCATION */}
 
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+
+                    <div className="flex flex-wrap items-center gap-1">
+
+                      <span
+                        className={`
+                          px-1.5
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          ${getProjectClass(
+                            issue.project
+                          )}
+                        `}
+                      >
+                        {issue.project || "-"}
+                      </span>
+
+                      <span className="text-[11px] text-slate-600 truncate">
+                        {getDisplayLocation(
+                          issue.location
+                        )}
+                      </span>
+                    </div>
 
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
-                        issue.project
-                      )}`}
-                    >
-                      {issue.project || "-"}
-                    </span>
-
-                    <p
-                      className="text-sm text-slate-600 truncate flex-1 min-w-0"
-                      title={issue.location}
-                    >
-                      {issue.location || "-"}
-                    </p>
-
-                    <span
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
-                        issue.priority
-                      )}`}
+                      className={`
+                        shrink-0
+                        px-1.5
+                        py-0.5
+                        rounded-full
+                        text-[10px]
+                        font-semibold
+                        ${getPriorityClass(
+                          issue.priority
+                        )}
+                      `}
                     >
                       {issue.priority}
                     </span>
-
                   </div>
 
                   {/* ACTION */}
 
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-1 mt-2">
 
                     <Link
                       href={`/issues/${issue.id}`}
-                      className="flex-1 text-center px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
+                      className="
+                        flex-1
+                        text-center
+                        px-2
+                        py-1
+                        rounded-md
+                        border border-slate-300
+                        bg-white
+                        hover:bg-slate-100
+                        text-[11px]
+                        font-medium
+                        text-slate-700
+                      "
                     >
                       View
                     </Link>
 
                     <Link
                       href={`/issues/${issue.id}/edit`}
-                      className="flex-1 text-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                      className="
+                        flex-1
+                        text-center
+                        px-2
+                        py-1
+                        rounded-md
+                        bg-blue-600
+                        hover:bg-blue-700
+                        text-white
+                        text-[11px]
+                        font-medium
+                      "
                     >
                       Edit
                     </Link>
-
                   </div>
-
                 </div>
-
               </div>
-
             ))}
-
           </div>
-
         )}
-
       </div>
-
     </main>
   );
 }

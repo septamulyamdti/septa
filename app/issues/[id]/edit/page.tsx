@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -482,8 +483,8 @@ export default function EditIssuePage() {
 
   if (loading) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-5 text-center text-xs text-slate-500">
           Loading issue...
         </div>
       </main>
@@ -496,20 +497,20 @@ export default function EditIssuePage() {
 
   if (!issue) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
 
-          <h1 className="text-xl font-bold text-slate-800">
+          <h1 className="text-lg font-bold text-slate-800">
             Issue tidak ditemukan
           </h1>
 
-          <p className="text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 mt-1.5">
             Data issue tidak tersedia.
           </p>
 
           <Link
             href="/issues"
-            className="inline-block mt-4 text-blue-600 hover:text-blue-700"
+            className="inline-block mt-4 text-xs text-blue-600 hover:text-blue-700"
           >
             ← Kembali ke Issues
           </Link>
@@ -524,23 +525,23 @@ export default function EditIssuePage() {
   // =====================================================
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
+    <main className="p-2.5 sm:p-3 lg:p-4 max-w-5xl mx-auto">
 
       {/* HEADER */}
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 mb-3">
 
         <div>
 
-          <p className="text-sm text-slate-500 mb-1">
+          <p className="text-[10px] text-slate-500 mb-0.5">
             Issue Management
           </p>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-800">
             Edit Issue
           </h1>
 
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-[11px] text-slate-500 mt-0.5">
             {issue.issue_code}
           </p>
 
@@ -548,7 +549,7 @@ export default function EditIssuePage() {
 
         <Link
           href={`/issues/${issue.id}`}
-          className="text-slate-600 hover:text-slate-900"
+          className="text-[11px] text-slate-600 hover:text-slate-900"
         >
           ← Back to Issue
         </Link>
@@ -559,14 +560,14 @@ export default function EditIssuePage() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 sm:p-8 rounded-xl shadow space-y-6"
+        className="bg-white p-3 sm:p-4 rounded-lg shadow-sm space-y-3"
       >
 
         {/* ISSUE CODE */}
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Issue Code
           </label>
 
@@ -574,10 +575,10 @@ export default function EditIssuePage() {
             type="text"
             value={issue.issue_code || ""}
             disabled
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-slate-100 text-slate-500"
+            className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs bg-slate-100 text-slate-500"
           />
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[10px] text-slate-500 mt-0.5">
             Issue Code tidak dapat diubah.
           </p>
 
@@ -587,7 +588,7 @@ export default function EditIssuePage() {
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Project
           </label>
 
@@ -595,7 +596,7 @@ export default function EditIssuePage() {
             name="project"
             value={formData.project}
             onChange={handleChange}
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           >
 
@@ -635,7 +636,7 @@ export default function EditIssuePage() {
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Issue Title
           </label>
 
@@ -645,7 +646,7 @@ export default function EditIssuePage() {
             value={formData.title}
             onChange={handleChange}
             placeholder="Masukkan judul issue"
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           />
 
@@ -655,7 +656,7 @@ export default function EditIssuePage() {
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Description
           </label>
 
@@ -664,8 +665,8 @@ export default function EditIssuePage() {
             value={formData.description}
             onChange={handleChange}
             placeholder="Jelaskan detail issue..."
-            rows={6}
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            rows={4}
+            className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
             required
           />
 
@@ -673,13 +674,13 @@ export default function EditIssuePage() {
 
         {/* CATEGORY & PRIORITY */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
           {/* CATEGORY */}
 
           <div>
 
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Category
             </label>
 
@@ -687,7 +688,7 @@ export default function EditIssuePage() {
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
 
@@ -727,7 +728,7 @@ export default function EditIssuePage() {
 
           <div>
 
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Priority
             </label>
 
@@ -735,7 +736,7 @@ export default function EditIssuePage() {
               name="priority"
               value={formData.priority}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
 
@@ -763,13 +764,13 @@ export default function EditIssuePage() {
 
         {/* LOCATION & ASSIGNEE */}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
           {/* LOCATION */}
 
           <div>
 
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Location
             </label>
 
@@ -777,7 +778,7 @@ export default function EditIssuePage() {
               name="location"
               value={formData.location}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
               required
               disabled={!formData.project}
             >
@@ -805,7 +806,7 @@ export default function EditIssuePage() {
 
           <div>
 
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Assignee
             </label>
 
@@ -813,7 +814,7 @@ export default function EditIssuePage() {
               name="assignee"
               value={formData.assignee}
               onChange={handleChange}
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
 
@@ -833,16 +834,32 @@ export default function EditIssuePage() {
                 Rizqy F Akbar
               </option>
 
-              <option value="Pak Zandi">
-                Pak Zandi
+              <option value="Alung">
+                Alung
               </option>
 
-              <option value="Pak Alex">
-                Pak Alex
+              <option value="Syahrul">
+                Syahrul
               </option>
 
-              <option value="Pak Bona">
-                Pak Bona
+              <option value="Hagi">
+                Hagi
+              </option>
+
+              <option value="Sadam">
+                Sadam
+              </option>
+
+              <option value="Fadil">
+                Fadil
+              </option>
+
+              <option value="Ino">
+                Ino
+              </option>
+
+              <option value="Wildan">
+                Wildan
               </option>
 
             </select>
@@ -855,7 +872,7 @@ export default function EditIssuePage() {
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Status
           </label>
 
@@ -863,7 +880,7 @@ export default function EditIssuePage() {
             name="status"
             value={formData.status}
             onChange={handleChange}
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           >
 
@@ -891,7 +908,7 @@ export default function EditIssuePage() {
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Resolution
           </label>
 
@@ -900,11 +917,11 @@ export default function EditIssuePage() {
             value={formData.resolution}
             onChange={handleChange}
             placeholder="Masukkan solusi atau resolution issue..."
-            rows={5}
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            rows={4}
+            className="w-full border border-slate-300 rounded-md px-2.5 py-2 text-xs text-slate-800 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
           />
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[10px] text-slate-500 mt-0.5">
             Isi resolution jika issue sudah ditangani atau diselesaikan.
           </p>
 
@@ -914,7 +931,7 @@ export default function EditIssuePage() {
 
         <div>
 
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
             Reporter
           </label>
 
@@ -922,10 +939,10 @@ export default function EditIssuePage() {
             type="text"
             value={issue.reporter || ""}
             disabled
-            className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-slate-100 text-slate-500"
+            className="w-full h-8 border border-slate-300 rounded-md px-2.5 text-xs bg-slate-100 text-slate-500"
           />
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[10px] text-slate-500 mt-0.5">
             Reporter tidak dapat diubah.
           </p>
 
@@ -933,11 +950,11 @@ export default function EditIssuePage() {
 
         {/* BUTTONS */}
 
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-slate-200">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t border-slate-200">
 
           <Link
             href={`/issues/${issue.id}`}
-            className="px-5 py-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-medium text-center transition"
+            className="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-medium text-[11px] text-center transition"
           >
             Cancel
           </Link>
@@ -945,7 +962,7 @@ export default function EditIssuePage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium transition"
+            className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium text-[11px] transition"
           >
             {saving
               ? "Saving..."

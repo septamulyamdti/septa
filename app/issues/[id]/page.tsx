@@ -1,4 +1,5 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -258,8 +259,8 @@ export default function IssueDetailPage() {
 
   if (loading) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-5 text-center text-xs text-slate-500">
           Loading issue...
         </div>
       </main>
@@ -272,19 +273,19 @@ export default function IssueDetailPage() {
 
   if (!issue) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center">
-          <h1 className="text-2xl font-bold text-slate-800">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+          <h1 className="text-lg font-bold text-slate-800">
             Issue Tidak Ditemukan
           </h1>
 
-          <p className="text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 mt-1.5">
             Data issue tidak tersedia.
           </p>
 
           <Link
             href="/issues"
-            className="inline-block mt-6 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg"
+            className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs"
           >
             ← Kembali ke Issues
           </Link>
@@ -298,38 +299,38 @@ export default function IssueDetailPage() {
   // =====================================================
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+    <main className="p-2.5 sm:p-3 lg:p-4 max-w-6xl mx-auto">
 
       {/* HEADER */}
 
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2.5 mb-3">
 
         <div>
-          <p className="text-sm text-slate-500 mb-2">
+          <p className="text-[10px] text-slate-500 mb-0.5">
             Issue Detail
           </p>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-800">
             {issue.issue_code}
           </h1>
 
-          <p className="text-slate-600 mt-2 text-lg">
+          <p className="text-xs text-slate-600 mt-0.5">
             {issue.title}
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-1.5">
 
           <Link
             href="/issues"
-            className="px-5 py-3 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 transition"
+            className="px-2.5 py-1.5 rounded-md border border-slate-300 hover:bg-slate-100 text-slate-700 text-[11px] transition"
           >
             ← Back
           </Link>
 
           <Link
             href={`/issues/${issue.id}/edit`}
-            className="px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition"
+            className="px-2.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] transition"
           >
             Edit Issue
           </Link>
@@ -340,22 +341,22 @@ export default function IssueDetailPage() {
 
       {/* WORKFLOW */}
 
-      <div className="bg-white rounded-xl shadow mb-6 p-6">
+      <div className="bg-white rounded-lg shadow-sm mb-3 p-3 sm:p-4">
 
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
 
           <div>
-            <h2 className="text-lg font-bold text-slate-800">
+            <h2 className="text-sm sm:text-[15px] font-bold text-slate-800">
               Issue Workflow
             </h2>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 mt-0.5">
               Current status: {issue.status}
             </p>
           </div>
 
           <span
-            className={`px-4 py-2 rounded-full text-sm font-semibold w-fit ${getStatusClass(
+            className={`px-2.5 py-1 rounded-full text-[10px] font-semibold w-fit ${getStatusClass(
               issue.status
             )}`}
           >
@@ -366,7 +367,7 @@ export default function IssueDetailPage() {
 
         <div className="relative">
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
 
             {workflowSteps.map((step, index) => {
 
@@ -389,7 +390,7 @@ export default function IssueDetailPage() {
 
                   {index < workflowSteps.length - 1 && (
                     <div
-                      className={`hidden md:block absolute top-5 left-[calc(50%+20px)] w-[calc(100%-40px)] h-1 ${
+                      className={`hidden md:block absolute top-4 left-[calc(50%+16px)] w-[calc(100%-32px)] h-0.5 ${
                         index < currentStep
                           ? "bg-green-500"
                           : "bg-slate-200"
@@ -398,11 +399,11 @@ export default function IssueDetailPage() {
                   )}
 
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-white shadow z-10 ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm z-10 ${
                       isCompleted
                         ? "bg-green-500 text-white"
                         : isCurrent
-                        ? "bg-green-500 text-white ring-4 ring-green-100"
+                        ? "bg-green-500 text-white ring-2 ring-green-100"
                         : "bg-slate-200 text-slate-500"
                     }`}
                   >
@@ -412,7 +413,7 @@ export default function IssueDetailPage() {
                   </div>
 
                   <p
-                    className={`mt-3 font-semibold ${
+                    className={`mt-1.5 text-xs font-semibold ${
                       isPending
                         ? "text-slate-400"
                         : "text-slate-800"
@@ -422,7 +423,7 @@ export default function IssueDetailPage() {
                   </p>
 
                   <p
-                    className={`text-xs mt-1 max-w-[180px] ${
+                    className={`text-[10px] mt-0.5 max-w-[170px] ${
                       isPending
                         ? "text-slate-400"
                         : "text-slate-500"
@@ -443,26 +444,26 @@ export default function IssueDetailPage() {
 
       {/* ISSUE INFORMATION */}
 
-      <div className="bg-white rounded-xl shadow mb-6">
+      <div className="bg-white rounded-lg shadow-sm mb-3">
 
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-slate-800">
+        <div className="px-3 py-2.5 sm:px-4 border-b border-slate-200">
+          <h2 className="text-sm sm:text-[15px] font-bold text-slate-800">
             Issue Information
           </h2>
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-4">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3">
 
             {/* ISSUE CODE */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Issue Code
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5">
                 {issue.issue_code}
               </p>
             </div>
@@ -470,11 +471,11 @@ export default function IssueDetailPage() {
             {/* PROJECT */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Project
               </p>
 
-              <span className="inline-block mt-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
+              <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-medium">
                 {issue.project || "-"}
               </span>
             </div>
@@ -482,11 +483,11 @@ export default function IssueDetailPage() {
             {/* CATEGORY */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Category
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5">
                 {issue.category || "-"}
               </p>
             </div>
@@ -494,11 +495,11 @@ export default function IssueDetailPage() {
             {/* LOCATION */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Location
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5">
                 {issue.location || "-"}
               </p>
             </div>
@@ -506,11 +507,11 @@ export default function IssueDetailPage() {
             {/* ASSIGNEE */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Assignee
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5">
                 {issue.assignee || "Belum ditentukan"}
               </p>
             </div>
@@ -518,11 +519,11 @@ export default function IssueDetailPage() {
             {/* REPORTER */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Reporter
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1 break-all">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5 break-all">
                 {issue.reporter || "-"}
               </p>
             </div>
@@ -530,12 +531,12 @@ export default function IssueDetailPage() {
             {/* PRIORITY */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Priority
               </p>
 
               <span
-                className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-medium ${getPriorityClass(
+                className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium ${getPriorityClass(
                   issue.priority
                 )}`}
               >
@@ -546,11 +547,11 @@ export default function IssueDetailPage() {
             {/* CREATED */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Created
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5">
                 {formatDate(issue.created_at)}
               </p>
             </div>
@@ -558,11 +559,11 @@ export default function IssueDetailPage() {
             {/* UPDATED */}
 
             <div>
-              <p className="text-sm text-slate-500">
+              <p className="text-[10px] text-slate-500">
                 Last Updated
               </p>
 
-              <p className="font-semibold text-slate-800 mt-1">
+              <p className="font-semibold text-xs text-slate-800 mt-0.5">
                 {formatDate(issue.updated_at)}
               </p>
             </div>
@@ -575,22 +576,22 @@ export default function IssueDetailPage() {
 
       {/* DESCRIPTION */}
 
-      <div className="bg-white rounded-xl shadow mb-6">
+      <div className="bg-white rounded-lg shadow-sm mb-3">
 
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-slate-800">
+        <div className="px-3 py-2.5 sm:px-4 border-b border-slate-200">
+          <h2 className="text-sm sm:text-[15px] font-bold text-slate-800">
             Description
           </h2>
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-4">
 
           {issue.description ? (
-            <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+            <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
               {issue.description}
             </p>
           ) : (
-            <p className="text-slate-400 italic">
+            <p className="text-[11px] text-slate-400 italic">
               Belum ada description.
             </p>
           )}
@@ -601,32 +602,32 @@ export default function IssueDetailPage() {
 
       {/* RESOLUTION */}
 
-      <div className="bg-white rounded-xl shadow mb-6">
+      <div className="bg-white rounded-lg shadow-sm mb-3">
 
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-slate-800">
+        <div className="px-3 py-2.5 sm:px-4 border-b border-slate-200">
+          <h2 className="text-sm sm:text-[15px] font-bold text-slate-800">
             Resolution
           </h2>
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-4">
 
           {issue.resolution ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-5">
-              <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+            <div className="bg-green-50 border border-green-200 rounded-md p-3">
+              <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed">
                 {issue.resolution}
               </p>
             </div>
           ) : (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
+            <div className="bg-slate-50 border border-slate-200 rounded-md p-3">
 
-              <p className="text-slate-500 italic">
+              <p className="text-[11px] text-slate-500 italic">
                 Resolution belum tersedia.
               </p>
 
               {(issue.status === "Resolved" ||
                 issue.status === "Closed") && (
-                <p className="text-sm text-red-500 mt-2">
+                <p className="text-[10px] text-red-500 mt-1.5">
                   Status sudah {issue.status},
                   tetapi resolution belum diisi.
                 </p>
@@ -641,26 +642,26 @@ export default function IssueDetailPage() {
 
       {/* HISTORY */}
 
-      <div className="bg-white rounded-xl shadow">
+      <div className="bg-white rounded-lg shadow-sm">
 
-        <div className="p-6 border-b">
+        <div className="px-3 py-2.5 sm:px-4 border-b border-slate-200">
 
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
 
             <div>
-              <h2 className="text-xl font-bold text-slate-800">
+              <h2 className="text-sm sm:text-[15px] font-bold text-slate-800">
                 History
               </h2>
 
-              <p className="text-sm text-slate-500 mt-1">
+              <p className="text-[10px] text-slate-500 mt-0.5">
                 Riwayat perubahan issue.
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
 
               {!historyLoading && (
-                <span className="text-sm text-slate-500">
+                <span className="text-[10px] text-slate-500">
                   {history.length} perubahan
                 </span>
               )}
@@ -669,7 +670,7 @@ export default function IssueDetailPage() {
                 type="button"
                 onClick={fetchIssue}
                 disabled={historyLoading}
-                className="px-3 py-2 text-sm rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-50"
+                className="px-2.5 py-1.5 text-[11px] rounded-md border border-slate-300 hover:bg-slate-100 disabled:opacity-50"
               >
                 Refresh
               </button>
@@ -680,32 +681,32 @@ export default function IssueDetailPage() {
 
         </div>
 
-        <div className="p-6">
+        <div className="p-3 sm:p-4">
 
           {historyLoading ? (
 
-            <div className="text-center py-8">
-              <p className="text-slate-400">
+            <div className="text-center py-6">
+              <p className="text-[11px] text-slate-400">
                 Loading history...
               </p>
             </div>
 
           ) : historyError ? (
 
-            <div className="bg-red-50 border border-red-200 rounded-lg p-5">
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
 
-              <p className="font-semibold text-red-700">
+              <p className="font-semibold text-xs text-red-700">
                 Gagal mengambil history
               </p>
 
-              <p className="text-sm text-red-600 mt-2 break-words">
+              <p className="text-[10px] text-red-600 mt-1.5 break-words">
                 {historyError}
               </p>
 
               <button
                 type="button"
                 onClick={fetchIssue}
-                className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm"
+                className="mt-3 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-[11px]"
               >
                 Coba Lagi
               </button>
@@ -714,13 +715,13 @@ export default function IssueDetailPage() {
 
           ) : history.length === 0 ? (
 
-            <div className="text-center py-8">
+            <div className="text-center py-6">
 
-              <div className="text-4xl mb-3">
+              <div className="text-3xl mb-2">
                 📋
               </div>
 
-              <p className="text-slate-400">
+              <p className="text-[11px] text-slate-400">
                 Belum ada history perubahan.
               </p>
 
@@ -728,32 +729,32 @@ export default function IssueDetailPage() {
 
           ) : (
 
-            <div className="space-y-5">
+            <div className="space-y-3">
 
               {history.map((item) => (
 
                 <div
                   key={item.id}
-                  className="border border-slate-200 rounded-xl p-5 hover:shadow-sm transition"
+                  className="border border-slate-200 rounded-lg p-3 hover:shadow-sm transition"
                 >
 
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1.5">
 
                     <div>
 
-                      <p className="font-semibold text-slate-800">
+                      <p className="font-semibold text-xs text-slate-800">
                         {item.action || "Issue Updated"}
                       </p>
 
                       {item.changed_by && (
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[10px] text-slate-500 mt-0.5">
                           Changed by: {item.changed_by}
                         </p>
                       )}
 
                     </div>
 
-                    <p className="text-xs text-slate-400">
+                    <p className="text-[10px] text-slate-400">
                       {formatDate(item.created_at)}
                     </p>
 
@@ -763,28 +764,28 @@ export default function IssueDetailPage() {
 
                   {(item.old_status || item.new_status) && (
 
-                    <div className="mt-4 bg-slate-50 rounded-lg p-4">
+                    <div className="mt-2.5 bg-slate-50 rounded-md p-2.5">
 
-                      <p className="text-xs font-medium text-slate-500 mb-2">
+                      <p className="text-[10px] font-medium text-slate-500 mb-1.5">
                         Status Change
                       </p>
 
-                      <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
 
                         <span
-                          className={`px-3 py-1 rounded-full text-sm ${getStatusClass(
+                          className={`px-2 py-0.5 rounded-full text-[10px] ${getStatusClass(
                             item.old_status
                           )}`}
                         >
                           {item.old_status || "-"}
                         </span>
 
-                        <span className="text-slate-400 font-semibold">
+                        <span className="text-slate-400 font-semibold text-xs">
                           →
                         </span>
 
                         <span
-                          className={`px-3 py-1 rounded-full text-sm ${getStatusClass(
+                          className={`px-2 py-0.5 rounded-full text-[10px] ${getStatusClass(
                             item.new_status
                           )}`}
                         >
@@ -801,28 +802,28 @@ export default function IssueDetailPage() {
 
                   {(item.old_priority || item.new_priority) && (
 
-                    <div className="mt-4 bg-slate-50 rounded-lg p-4">
+                    <div className="mt-2.5 bg-slate-50 rounded-md p-2.5">
 
-                      <p className="text-xs font-medium text-slate-500 mb-2">
+                      <p className="text-[10px] font-medium text-slate-500 mb-1.5">
                         Priority Change
                       </p>
 
-                      <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
 
                         <span
-                          className={`px-3 py-1 rounded-full text-sm ${getPriorityClass(
+                          className={`px-2 py-0.5 rounded-full text-[10px] ${getPriorityClass(
                             item.old_priority
                           )}`}
                         >
                           {item.old_priority || "-"}
                         </span>
 
-                        <span className="text-slate-400 font-semibold">
+                        <span className="text-slate-400 font-semibold text-xs">
                           →
                         </span>
 
                         <span
-                          className={`px-3 py-1 rounded-full text-sm ${getPriorityClass(
+                          className={`px-2 py-0.5 rounded-full text-[10px] ${getPriorityClass(
                             item.new_priority
                           )}`}
                         >
@@ -839,9 +840,9 @@ export default function IssueDetailPage() {
 
                   {item.description && (
 
-                    <div className="mt-4">
+                    <div className="mt-2.5">
 
-                      <p className="text-sm text-slate-600 whitespace-pre-wrap">
+                      <p className="text-[11px] text-slate-600 whitespace-pre-wrap">
                         {item.description}
                       </p>
 

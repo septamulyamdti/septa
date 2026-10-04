@@ -1,4 +1,5 @@
 "use client";
+
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -90,6 +91,36 @@ function IssuesPageContent() {
   const PROJECTS = Object.keys(PROJECT_LOCATIONS);
 
   // =====================================================
+  // NORMALIZE LOCATION
+  // =====================================================
+
+  const normalizeLocation = (value?: string) => {
+    return (value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  };
+
+  // =====================================================
+  // DISPLAY LOCATION
+  // =====================================================
+
+  const getDisplayLocation = (location: string) => {
+    const normalized = normalizeLocation(location);
+
+    const masterLocation = Object.values(
+      PROJECT_LOCATIONS
+    )
+      .flat()
+      .find(
+        (master) =>
+          normalizeLocation(master) === normalized
+      );
+
+    return masterLocation || location;
+  };
+
+  // =====================================================
   // GET ISSUE AGE
   // =====================================================
 
@@ -118,7 +149,6 @@ function IssuesPageContent() {
       return true;
     }
 
-    // Resolved dan Closed tidak termasuk aging
     if (
       issue.status === "Resolved" ||
       issue.status === "Closed"
@@ -132,20 +162,14 @@ function IssuesPageContent() {
 
     const age = getIssueAge(issue.created_at);
 
-    // Aging > 3 Days
-    // Hanya umur 4 - 7 hari
     if (agingFromUrl === "3") {
       return age > 3 && age <= 7;
     }
 
-    // Aging > 7 Days
-    // Hanya umur 8 - 14 hari
     if (agingFromUrl === "7") {
       return age > 7 && age <= 14;
     }
 
-    // Aging > 14 Days
-    // Umur 15 hari ke atas
     if (agingFromUrl === "14") {
       return age > 14;
     }
@@ -187,10 +211,6 @@ function IssuesPageContent() {
         ascending: false,
       });
 
-    // =====================================================
-    // FILTER STATUS DARI URL
-    // =====================================================
-
     if (
       statusFromUrl &&
       [
@@ -205,10 +225,6 @@ function IssuesPageContent() {
         statusFromUrl
       );
     }
-
-    // =====================================================
-    // FILTER PRIORITY DARI URL
-    // =====================================================
 
     if (
       priorityFromUrl &&
@@ -360,27 +376,66 @@ function IssuesPageContent() {
   // =====================================================
 
   const locations = useMemo(() => {
+    let sourceLocations: string[] = [];
+
     if (
       projectFilter !== "All" &&
       PROJECT_LOCATIONS[projectFilter]
     ) {
-      return PROJECT_LOCATIONS[projectFilter];
+      sourceLocations =
+        PROJECT_LOCATIONS[projectFilter];
+    } else {
+      sourceLocations = issues
+        .map((issue) => issue.location)
+        .filter(Boolean);
     }
 
-    const uniqueLocations = Array.from(
-      new Set(
-        issues
-          .map((issue) => issue.location)
-          .filter(Boolean)
-      )
+    // Gabungkan lokasi yang berbeda kapitalisasi.
+    // Contoh:
+    // NVDC SUNTER
+    // NVDC Sunter
+    // nvdc sunter
+    // akan menjadi satu pilihan: NVDC Sunter
+    const uniqueLocations =
+      new Map<string, string>();
+
+    sourceLocations.forEach((location) => {
+      const normalized =
+        normalizeLocation(location);
+
+      if (!normalized) {
+        return;
+      }
+
+      const masterLocation =
+        Object.values(PROJECT_LOCATIONS)
+          .flat()
+          .find(
+            (master) =>
+              normalizeLocation(master) ===
+              normalized
+          );
+
+      const displayLocation =
+        masterLocation || location.trim();
+
+      if (!uniqueLocations.has(normalized)) {
+        uniqueLocations.set(
+          normalized,
+          displayLocation
+        );
+      }
+    });
+
+    return Array.from(
+      uniqueLocations.values()
+    ).sort((a, b) =>
+      a.localeCompare(b)
     );
-
-    return uniqueLocations.sort();
-  }, [issues, projectFilter]);
-
-  // =====================================================
-  // PROJECT LIST
-  // =====================================================
+  }, [
+    issues,
+    projectFilter,
+  ]);
 
   const projects = PROJECTS;
 
@@ -407,9 +462,11 @@ function IssuesPageContent() {
       priorityFilter === "All" ||
       issue.priority === priorityFilter;
 
+    // Case-insensitive location matching
     const locationMatch =
       locationFilter === "All" ||
-      issue.location === locationFilter;
+      normalizeLocation(issue.location) ===
+        normalizeLocation(locationFilter);
 
     const projectMatch =
       projectFilter === "All" ||
@@ -460,7 +517,6 @@ function IssuesPageContent() {
       );
     }
 
-    // Pertahankan priority jika sedang aktif
     if (
       priorityFilter !== "All"
     ) {
@@ -470,7 +526,6 @@ function IssuesPageContent() {
       );
     }
 
-    // Pertahankan aging jika sedang aktif
     if (
       agingFromUrl === "3" ||
       agingFromUrl === "7" ||
@@ -503,7 +558,6 @@ function IssuesPageContent() {
 
     const params = new URLSearchParams();
 
-    // Pertahankan status jika sedang aktif
     if (
       statusFilter !== "All"
     ) {
@@ -513,7 +567,6 @@ function IssuesPageContent() {
       );
     }
 
-    // Priority
     if (value !== "All") {
       params.set(
         "priority",
@@ -521,7 +574,6 @@ function IssuesPageContent() {
       );
     }
 
-    // Pertahankan aging jika sedang aktif
     if (
       agingFromUrl === "3" ||
       agingFromUrl === "7" ||
@@ -549,8 +601,8 @@ function IssuesPageContent() {
 
   if (loading) {
     return (
-      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
+      <main className="p-2.5 sm:p-3 lg:p-4 max-w-7xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-4 text-center text-xs text-slate-500">
           Loading issues...
         </div>
       </main>
@@ -562,52 +614,93 @@ function IssuesPageContent() {
   // =====================================================
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <main className="p-2.5 sm:p-3 lg:p-4 max-w-7xl mx-auto">
 
       {/* =================================================
-          STICKY HEADER + STATUS + PRIORITY + AGING + FILTER
+          STICKY HEADER + FILTER
       ================================================= */}
 
-      <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-0 pb-4 bg-slate-50 rounded-2xl">
+      <div
+        className="
+          sticky top-0 z-30
+          -mx-2.5 sm:-mx-3 lg:-mx-4
+          px-2.5 sm:px-3 lg:px-4
+          pt-0 pb-2
+          bg-slate-50
+          rounded-xl
+        "
+      >
 
         {/* HEADER */}
 
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-
+        <div
+          className="
+            flex flex-col
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+            gap-2
+            mb-2.5
+          "
+        >
           <div>
-            <p className="text-sm text-slate-500 mb-1">
+            <p className="text-[11px] text-slate-500 mb-0.5">
               Issue Management
             </p>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+            <h1 className="text-lg sm:text-xl font-bold leading-tight text-slate-800">
               All Issues
             </h1>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 mt-0.5">
               Daftar seluruh issue yang tercatat.
             </p>
           </div>
 
           <Link
             href="/issues/create"
-            className="inline-flex items-center justify-center px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition"
+            className="
+              inline-flex
+              items-center
+              justify-center
+              px-3
+              py-1.5
+              rounded-md
+              bg-blue-600
+              hover:bg-blue-700
+              text-white
+              text-xs
+              font-medium
+              transition
+            "
           >
             + Create Issue
           </Link>
-
         </div>
 
-        {/* ACTIVE STATUS FROM DASHBOARD */}
+        {/* ACTIVE STATUS */}
 
         {statusFromUrl && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
+          <div
+            className="
+              bg-blue-50
+              border border-blue-200
+              rounded-md
+              px-2.5 py-1.5
+              mb-2
+              flex flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-1.5
+            "
+          >
             <div>
-              <p className="text-sm text-blue-700 font-medium">
+              <p className="text-[10px] text-blue-700 font-medium">
                 Menampilkan issue dengan status:
               </p>
 
-              <p className="text-lg font-bold text-blue-800">
+              <p className="text-xs font-bold text-blue-800">
                 {statusFromUrl}
               </p>
             </div>
@@ -615,25 +708,36 @@ function IssuesPageContent() {
             <button
               type="button"
               onClick={resetFilters}
-              className="text-sm font-medium text-blue-700 hover:text-blue-900"
+              className="text-[11px] font-medium text-blue-700 hover:text-blue-900"
             >
               Tampilkan Semua Issue
             </button>
-
           </div>
         )}
 
-        {/* ACTIVE PRIORITY FROM DASHBOARD */}
+        {/* ACTIVE PRIORITY */}
 
         {priorityFromUrl && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
+          <div
+            className="
+              bg-red-50
+              border border-red-200
+              rounded-md
+              px-2.5 py-1.5
+              mb-2
+              flex flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-1.5
+            "
+          >
             <div>
-              <p className="text-sm text-red-700 font-medium">
+              <p className="text-[10px] text-red-700 font-medium">
                 Menampilkan issue dengan priority:
               </p>
 
-              <p className="text-lg font-bold text-red-800">
+              <p className="text-xs font-bold text-red-800">
                 {priorityFromUrl}
               </p>
             </div>
@@ -641,29 +745,40 @@ function IssuesPageContent() {
             <button
               type="button"
               onClick={resetFilters}
-              className="text-sm font-medium text-red-700 hover:text-red-900"
+              className="text-[11px] font-medium text-red-700 hover:text-red-900"
             >
               Tampilkan Semua Issue
             </button>
-
           </div>
         )}
 
-        {/* ACTIVE AGING FROM DASHBOARD */}
+        {/* ACTIVE AGING */}
 
         {(
           agingFromUrl === "3" ||
           agingFromUrl === "7" ||
           agingFromUrl === "14"
         ) && (
-          <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-
+          <div
+            className="
+              bg-orange-50
+              border border-orange-200
+              rounded-md
+              px-2.5 py-1.5
+              mb-2
+              flex flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-1.5
+            "
+          >
             <div>
-              <p className="text-sm text-orange-700 font-medium">
+              <p className="text-[10px] text-orange-700 font-medium">
                 Menampilkan issue berdasarkan aging:
               </p>
 
-              <p className="text-lg font-bold text-orange-800">
+              <p className="text-xs font-bold text-orange-800">
                 {getAgingLabel()}
               </p>
             </div>
@@ -671,24 +786,23 @@ function IssuesPageContent() {
             <button
               type="button"
               onClick={resetFilters}
-              className="text-sm font-medium text-orange-700 hover:text-orange-900"
+              className="text-[11px] font-medium text-orange-700 hover:text-orange-900"
             >
               Tampilkan Semua Issue
             </button>
-
           </div>
         )}
 
         {/* FILTER */}
 
-        <div className="bg-white rounded-xl shadow p-4 sm:p-5">
+        <div className="bg-white rounded-lg shadow-sm p-2.5 sm:p-3">
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
 
             {/* SEARCH */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Search Issue Code
               </label>
 
@@ -701,14 +815,29 @@ function IssuesPageContent() {
                   )
                 }
                 placeholder="Contoh: ISS-0001"
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  placeholder:text-slate-400
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               />
             </div>
 
             {/* PROJECT */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Project
               </label>
 
@@ -721,7 +850,21 @@ function IssuesPageContent() {
                   setProjectFilter(value);
                   setLocationFilter("All");
                 }}
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Project
@@ -737,14 +880,13 @@ function IssuesPageContent() {
                     </option>
                   )
                 )}
-
               </select>
             </div>
 
             {/* STATUS */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Status
               </label>
 
@@ -755,7 +897,21 @@ function IssuesPageContent() {
                     e.target.value
                   )
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Status
@@ -776,14 +932,13 @@ function IssuesPageContent() {
                 <option value="Closed">
                   Closed
                 </option>
-
               </select>
             </div>
 
             {/* PRIORITY */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Priority
               </label>
 
@@ -794,7 +949,21 @@ function IssuesPageContent() {
                     e.target.value
                   )
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Priority
@@ -815,14 +984,13 @@ function IssuesPageContent() {
                 <option value="Low">
                   Low
                 </option>
-
               </select>
             </div>
 
             {/* LOCATION */}
 
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-2">
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                 Location
               </label>
 
@@ -833,7 +1001,21 @@ function IssuesPageContent() {
                     e.target.value
                   )
                 }
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="
+                  w-full
+                  h-8
+                  border border-slate-300
+                  rounded-md
+                  px-2.5
+                  text-xs
+                  font-medium
+                  text-slate-800
+                  bg-white
+                  outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                  focus:border-blue-500
+                "
               >
                 <option value="All">
                   All Location
@@ -849,86 +1031,91 @@ function IssuesPageContent() {
                     </option>
                   )
                 )}
-
               </select>
             </div>
-
           </div>
 
           {/* RESET */}
 
-          <div className="flex justify-end mt-4 pt-4 border-t border-slate-100">
-
+          <div className="flex justify-end mt-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={resetFilters}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="
+                text-[11px]
+                text-blue-600
+                hover:text-blue-700
+                font-medium
+              "
             >
               Reset Filter
             </button>
-
           </div>
-
         </div>
-
       </div>
 
       {/* =================================================
           ISSUE LIST
       ================================================= */}
 
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
 
-        <div className="px-4 sm:px-6 py-4 border-b bg-slate-50">
-
-          <h2 className="font-bold text-slate-800">
+        <div className="px-4 py-2.5 border-b bg-slate-50">
+          <h2 className="text-xs font-bold text-slate-800">
             Issue List
           </h2>
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-[11px] text-slate-500 mt-0.5">
             {filteredIssues.length} issue ditemukan
           </p>
-
         </div>
 
         {/* EMPTY */}
 
         {filteredIssues.length === 0 ? (
-
-          <div className="p-10 text-center">
-
-            <div className="text-4xl mb-3">
+          <div className="p-6 text-center">
+            <div className="text-2xl mb-1.5">
               📋
             </div>
 
-            <h3 className="font-semibold text-slate-700">
+            <h3 className="text-xs font-semibold text-slate-700">
               Tidak ada issue
             </h3>
 
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-500 mt-1">
               Tidak ditemukan issue berdasarkan filter yang dipilih.
             </p>
 
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="mt-2 text-[11px] text-blue-600 hover:text-blue-700 font-medium"
             >
               Reset Filter
             </button>
-
           </div>
-
         ) : (
-
           <div>
 
             {/* =================================================
                 DESKTOP HEADER
             ================================================= */}
 
-            <div className="hidden lg:grid grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 px-6 py-3 bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
-
+            <div
+              className="
+                hidden lg:grid
+                grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_135px]
+                gap-2
+                px-4
+                py-2
+                bg-slate-50
+                border-b
+                text-[10px]
+                font-semibold
+                text-slate-500
+                uppercase
+              "
+            >
               <div>
                 Issue Code
               </div>
@@ -956,29 +1143,41 @@ function IssuesPageContent() {
               <div className="text-right">
                 Action
               </div>
-
             </div>
 
             {/* ROWS */}
 
             {filteredIssues.map(
               (issue) => (
-
                 <div
                   key={issue.id}
-                  className="border-b last:border-b-0 hover:bg-slate-50 transition"
+                  className="
+                    border-b
+                    last:border-b-0
+                    hover:bg-slate-50
+                    transition
+                  "
                 >
 
                   {/* =================================================
                       DESKTOP
                   ================================================= */}
 
-                  <div className="hidden lg:grid grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_150px] gap-4 items-center px-6 py-4">
+                  <div
+                    className="
+                      hidden lg:grid
+                      grid-cols-[1.3fr_1fr_1.1fr_1.3fr_1.1fr_1fr_135px]
+                      gap-2
+                      items-center
+                      px-4
+                      py-2
+                    "
+                  >
 
                     {/* ISSUE CODE */}
 
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 truncate">
+                      <p className="text-xs font-semibold text-slate-800 truncate">
                         {issue.issue_code}
                       </p>
                     </div>
@@ -986,7 +1185,7 @@ function IssuesPageContent() {
                     {/* DATE */}
 
                     <div>
-                      <p className="text-sm text-slate-600 whitespace-nowrap">
+                      <p className="text-[11px] text-slate-600 whitespace-nowrap">
                         {formatDate(
                           issue.created_at
                         )}
@@ -997,9 +1196,18 @@ function IssuesPageContent() {
 
                     <div>
                       <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getProjectClass(
-                          issue.project
-                        )}`}
+                        className={`
+                          inline-flex
+                          px-2
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          whitespace-nowrap
+                          ${getProjectClass(
+                            issue.project
+                          )}
+                        `}
                       >
                         {issue.project || "-"}
                       </span>
@@ -1009,13 +1217,16 @@ function IssuesPageContent() {
 
                     <div className="min-w-0">
                       <p
-                        className="text-sm text-slate-700 truncate"
-                        title={
-                          issue.location
-                        }
+                        className="
+                          text-[11px]
+                          text-slate-700
+                          truncate
+                        "
+                        title={issue.location}
                       >
-                        {issue.location ||
-                          "-"}
+                        {getDisplayLocation(
+                          issue.location
+                        ) || "-"}
                       </p>
                     </div>
 
@@ -1023,9 +1234,18 @@ function IssuesPageContent() {
 
                     <div>
                       <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getStatusClass(
-                          issue.status
-                        )}`}
+                        className={`
+                          inline-flex
+                          px-2
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          whitespace-nowrap
+                          ${getStatusClass(
+                            issue.status
+                          )}
+                        `}
                       >
                         {issue.status}
                       </span>
@@ -1035,9 +1255,18 @@ function IssuesPageContent() {
 
                     <div>
                       <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPriorityClass(
-                          issue.priority
-                        )}`}
+                        className={`
+                          inline-flex
+                          px-2
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          whitespace-nowrap
+                          ${getPriorityClass(
+                            issue.priority
+                          )}
+                        `}
                       >
                         {issue.priority}
                       </span>
@@ -1045,111 +1274,165 @@ function IssuesPageContent() {
 
                     {/* ACTION */}
 
-                    <div className="flex justify-end gap-2">
-
+                    <div className="flex justify-end gap-1">
                       <Link
                         href={`/issues/${issue.id}`}
-                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700 transition"
+                        className="
+                          px-2
+                          py-1
+                          rounded-md
+                          border border-slate-300
+                          bg-white
+                          hover:bg-slate-100
+                          text-[11px]
+                          font-medium
+                          text-slate-700
+                          transition
+                        "
                       >
                         View
                       </Link>
 
                       <Link
                         href={`/issues/${issue.id}/edit`}
-                        className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
+                        className="
+                          px-2
+                          py-1
+                          rounded-md
+                          bg-blue-600
+                          hover:bg-blue-700
+                          text-white
+                          text-[11px]
+                          font-medium
+                          transition
+                        "
                       >
                         Edit
                       </Link>
-
                     </div>
-
                   </div>
 
                   {/* =================================================
                       TABLET
                   ================================================= */}
 
-                  <div className="hidden md:flex lg:hidden items-center justify-between gap-4 px-5 py-4">
-
+                  <div
+                    className="
+                      hidden md:flex lg:hidden
+                      items-center
+                      justify-between
+                      gap-2
+                      px-3
+                      py-2.5
+                    "
+                  >
                     <div className="min-w-0 flex-1">
 
-                      <p className="font-semibold text-slate-800">
+                      <p className="text-xs font-semibold text-slate-800">
                         {issue.issue_code}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-3 mt-2">
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
 
-                        <span className="text-xs text-slate-500">
+                        <span className="text-[10px] text-slate-500">
                           {formatDate(
                             issue.created_at
                           )}
                         </span>
 
-                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
-                          {issue.project ||
-                            "-"}
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">
+                          {issue.project || "-"}
                         </span>
 
-                        <span className="text-xs text-slate-500 truncate max-w-[180px]">
-                          {issue.location ||
-                            "-"}
+                        <span className="text-[10px] text-slate-500 truncate max-w-[180px]">
+                          {getDisplayLocation(
+                            issue.location
+                          ) || "-"}
                         </span>
 
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                            issue.status
-                          )}`}
+                          className={`
+                            px-1.5
+                            py-0.5
+                            rounded-full
+                            text-[10px]
+                            font-semibold
+                            ${getStatusClass(
+                              issue.status
+                            )}
+                          `}
                         >
                           {issue.status}
                         </span>
 
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
-                            issue.priority
-                          )}`}
+                          className={`
+                            px-1.5
+                            py-0.5
+                            rounded-full
+                            text-[10px]
+                            font-semibold
+                            ${getPriorityClass(
+                              issue.priority
+                            )}
+                          `}
                         >
                           {issue.priority}
                         </span>
-
                       </div>
-
                     </div>
 
-                    <div className="flex gap-2 shrink-0">
-
+                    <div className="flex gap-1 shrink-0">
                       <Link
                         href={`/issues/${issue.id}`}
-                        className="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
+                        className="
+                          px-2
+                          py-1
+                          rounded-md
+                          border border-slate-300
+                          bg-white
+                          hover:bg-slate-100
+                          text-[11px]
+                          font-medium
+                          text-slate-700
+                        "
                       >
                         View
                       </Link>
 
                       <Link
                         href={`/issues/${issue.id}/edit`}
-                        className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                        className="
+                          px-2
+                          py-1
+                          rounded-md
+                          bg-blue-600
+                          hover:bg-blue-700
+                          text-white
+                          text-[11px]
+                          font-medium
+                        "
                       >
                         Edit
                       </Link>
-
                     </div>
-
                   </div>
 
                   {/* =================================================
                       MOBILE
                   ================================================= */}
 
-                  <div className="md:hidden p-4">
+                  <div className="md:hidden p-2.5">
 
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2">
 
                       <div className="min-w-0">
 
-                        <p className="font-semibold text-slate-800 truncate">
+                        <p className="text-xs font-semibold text-slate-800 truncate">
                           {issue.issue_code}
                         </p>
 
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-[10px] text-slate-500 mt-0.5">
                           {formatDate(
                             issue.created_at
                           )}
@@ -1158,76 +1441,111 @@ function IssuesPageContent() {
                       </div>
 
                       <span
-                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                          issue.status
-                        )}`}
+                        className={`
+                          shrink-0
+                          px-1.5
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          ${getStatusClass(
+                            issue.status
+                          )}
+                        `}
                       >
                         {issue.status}
                       </span>
-
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1">
 
                         <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getProjectClass(
-                            issue.project
-                          )}`}
+                          className={`
+                            px-1.5
+                            py-0.5
+                            rounded-full
+                            text-[10px]
+                            font-semibold
+                            ${getProjectClass(
+                              issue.project
+                            )}
+                          `}
                         >
-                          {issue.project ||
-                            "-"}
+                          {issue.project || "-"}
                         </span>
 
-                        <span className="text-sm text-slate-600 truncate">
-                          {issue.location ||
-                            "-"}
+                        <span className="text-[11px] text-slate-600 truncate">
+                          {getDisplayLocation(
+                            issue.location
+                          ) || "-"}
                         </span>
-
                       </div>
 
                       <span
-                        className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${getPriorityClass(
-                          issue.priority
-                        )}`}
+                        className={`
+                          shrink-0
+                          px-1.5
+                          py-0.5
+                          rounded-full
+                          text-[10px]
+                          font-semibold
+                          ${getPriorityClass(
+                            issue.priority
+                          )}
+                        `}
                       >
                         {issue.priority}
                       </span>
-
                     </div>
 
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex gap-1 mt-2">
 
                       <Link
                         href={`/issues/${issue.id}`}
-                        className="flex-1 text-center px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-sm font-medium text-slate-700"
+                        className="
+                          flex-1
+                          text-center
+                          px-2
+                          py-1
+                          rounded-md
+                          border border-slate-300
+                          bg-white
+                          hover:bg-slate-100
+                          text-[11px]
+                          font-medium
+                          text-slate-700
+                        "
                       >
                         View
                       </Link>
 
                       <Link
                         href={`/issues/${issue.id}/edit`}
-                        className="flex-1 text-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+                        className="
+                          flex-1
+                          text-center
+                          px-2
+                          py-1
+                          rounded-md
+                          bg-blue-600
+                          hover:bg-blue-700
+                          text-white
+                          text-[11px]
+                          font-medium
+                        "
                       >
                         Edit
                       </Link>
-
                     </div>
-
                   </div>
-
                 </div>
-
               )
             )}
-
           </div>
-
         )}
-
       </div>
-
     </main>
   );
 }
@@ -1240,8 +1558,8 @@ export default function IssuesPage() {
   return (
     <Suspense
       fallback={
-        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-          <div className="bg-white rounded-xl shadow p-8 text-center text-slate-500">
+        <main className="p-2.5 sm:p-3 lg:p-4 max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm p-4 text-center text-xs text-slate-500">
             Loading issues...
           </div>
         </main>
