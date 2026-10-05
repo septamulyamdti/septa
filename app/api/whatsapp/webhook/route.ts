@@ -99,7 +99,7 @@ type WhatsAppWebhookBody = {
 };
 
 /* =========================================================
-   CONSTANTS
+   MENU / CONSTANTS
 ========================================================= */
 
 const PROJECTS = [
@@ -126,6 +126,53 @@ const PRIORITIES = [
   "Medium",
   "Low",
 ];
+
+/* =========================================================
+   PROJECT LOCATION MAPPING
+========================================================= */
+
+const PROJECT_LOCATIONS: Record<string, string[]> = {
+  TAM: [
+    "NVDC Karawang",
+    "NVDC Sunter",
+    "NVDC Cibitung",
+  ],
+
+  BPKB: [
+    "Kepri",
+    "Riau",
+    "Sulut",
+    "Sulteng",
+    "Sulsel",
+    "Sultra",
+    "Bulukumba",
+    "Kalteng",
+    "Kalsel",
+    "Sumenep",
+    "Jogja",
+  ],
+
+  STNK: [
+    "Lampung",
+    "Jabar",
+  ],
+
+  Mahindra: [
+    "Mahindra Cikarang",
+  ],
+
+  Hyundai: [
+    "Hyundai Cikarang",
+  ],
+
+  LMS: [
+    "BACY",
+  ],
+};
+
+/* =========================================================
+   CONVERSATION TIMEOUT
+========================================================= */
 
 const CONVERSATION_TIMEOUT_MS =
   30 * 60 * 1000;
@@ -161,7 +208,9 @@ function mainMenu() {
 4️⃣ ❓ Bantuan
 5️⃣ 👨‍💻 Hubungi Helpdesk
 
-Ketik *1-5*.`;
+Ketik *1-5* untuk memilih.
+
+Ketik *MENU* kapan saja untuk kembali.`;
 }
 
 /* =========================================================
@@ -171,18 +220,12 @@ Ketik *1-5*.`;
 function helpMessage() {
   return `❓ *Bantuan Helpdesk*
 
-📝 *1* — Buat laporan issue
-🔍 *2* — Cek status issue
-📋 *3* — Lihat My Issues
-👨‍💻 *5* — Hubungi Helpdesk
-
-Perintah cepat:
-*BUAT ISSUE*
-*STATUS ISS-YYYYMMDD-XXX*
-*MY ISSUES*
-*AGENT*
-*MENU*
-*BATAL*`;
+📝 *BUAT ISSUE* → Buat laporan baru
+🔍 *STATUS ISS-XXXX* → Cek status issue
+📋 *MY ISSUES* → Lihat laporan Anda
+👨‍💻 *AGENT* → Hubungi Helpdesk
+📋 *MENU* → Menu utama
+❌ *BATAL* → Batalkan proses`;
 }
 
 /* =========================================================
@@ -196,6 +239,77 @@ function normalizeText(
     .trim()
     .replace(/\s+/g, " ")
     .toUpperCase();
+}
+
+/* =========================================================
+   CLEAN PARSED VALUE
+========================================================= */
+
+function cleanParsedValue(
+  value: string
+) {
+  return value
+    .replace(/\\/g, "")
+    .replace(/\*/g, "")
+    .replace(/`/g, "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/* =========================================================
+   PARSE FIELD LINE
+========================================================= */
+
+function parseFieldLine(
+  line: string
+): {
+  key: string;
+  value: string;
+} | null {
+  let cleaned = line
+    .replace(/\\/g, "")
+    .trim();
+
+  if (!cleaned) {
+    return null;
+  }
+
+  /*
+   * Hilangkan markdown "*" yang biasa ikut
+   * terkirim dari WhatsApp.
+   *
+   * Contoh yang didukung:
+   *
+   *Issue:* Borescope Rusak
+   *Issue*: Borescope Rusak
+   Issue: Borescope Rusak
+   Issue\:Borescope Rusak
+   Issue:*Borescope Rusak*
+   */
+
+  cleaned = cleaned
+    .replace(/^\*+/, "")
+    .replace(/\*+$/, "")
+    .trim();
+
+  const match = cleaned.match(
+    /^(Issue|Project|Location|Category|Priority)\s*:\s*(.*)$/i
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const key =
+    match[1].toLowerCase();
+
+  const value =
+    cleanParsedValue(match[2]);
+
+  return {
+    key,
+    value,
+  };
 }
 
 /* =========================================================
@@ -263,15 +377,16 @@ async function saveWhatsAppMessage(
       return null;
     }
 
-    const { data: existing } =
-      await supabase
-        .from("whatsapp_messages")
-        .select("id")
-        .eq(
-          "message_id",
-          messageId
-        )
-        .maybeSingle();
+    const {
+      data: existing,
+    } = await supabase
+      .from("whatsapp_messages")
+      .select("id")
+      .eq(
+        "message_id",
+        messageId
+      )
+      .maybeSingle();
 
     if (existing) {
       return existing.id;
@@ -308,20 +423,22 @@ async function saveWhatsAppMessage(
           ).toISOString()
         : new Date().toISOString();
 
-    const { data, error } =
-      await supabase
-        .from("whatsapp_messages")
-        .insert({
-          message_id: messageId,
-          phone_number: phoneNumber,
-          direction: "incoming",
-          message_type:
-            message.type || "unknown",
-          message_text: messageText,
-          created_at: createdAt,
-        })
-        .select("id")
-        .single();
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("whatsapp_messages")
+      .insert({
+        message_id: messageId,
+        phone_number: phoneNumber,
+        direction: "incoming",
+        message_type:
+          message.type || "unknown",
+        message_text: messageText,
+        created_at: createdAt,
+      })
+      .select("id")
+      .single();
 
     if (error) {
       console.error(
@@ -350,17 +467,19 @@ async function saveWhatsAppMessage(
 async function getConversation(
   phoneNumber: string
 ): Promise<Conversation> {
-  const { data, error } =
-    await supabase
-      .from(
-        "whatsapp_conversations"
-      )
-      .select("*")
-      .eq(
-        "phone_number",
-        phoneNumber
-      )
-      .maybeSingle();
+  const {
+    data,
+    error,
+  } = await supabase
+    .from(
+      "whatsapp_conversations"
+    )
+    .select("*")
+    .eq(
+      "phone_number",
+      phoneNumber
+    )
+    .maybeSingle();
 
   if (error) {
     console.error(
@@ -393,24 +512,25 @@ async function saveConversation(
   state: ConversationState,
   draftData: DraftData = {}
 ) {
-  const { error } =
-    await supabase
-      .from(
-        "whatsapp_conversations"
-      )
-      .upsert(
-        {
-          phone_number: phoneNumber,
-          state,
-          draft_data: draftData,
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            "phone_number",
-        }
-      );
+  const {
+    error,
+  } = await supabase
+    .from(
+      "whatsapp_conversations"
+    )
+    .upsert(
+      {
+        phone_number: phoneNumber,
+        state,
+        draft_data: draftData,
+        updated_at:
+          new Date().toISOString(),
+      },
+      {
+        onConflict:
+          "phone_number",
+      }
+    );
 
   if (error) {
     console.error(
@@ -492,35 +612,44 @@ Contoh:
    PARSE ISSUE DATA
 ========================================================= */
 
-function parseIssueData(text: string): {
+function parseIssueData(
+  text: string
+): {
   description: string;
   project: string;
   location: string;
   category: string;
   priority: string;
 } | null {
-  const lines = text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const lines =
+    text
+      .split(/\r?\n/)
+      .map((line) =>
+        line.trim()
+      )
+      .filter(Boolean);
 
-  const values: Record<string, string> =
-    {};
+  const values: Record<
+    string,
+    string
+  > = {};
 
   for (const line of lines) {
-    const match = line.match(
-      /^(Issue|Project|Location|Category|Priority)\s*:\s*(.+)$/i
-    );
+    const parsed =
+      parseFieldLine(line);
 
-    if (match) {
-      values[
-        match[1].toLowerCase()
-      ] = match[2].trim();
+    if (!parsed) {
+      continue;
     }
+
+    values[parsed.key] =
+      parsed.value;
   }
 
   const description =
-    values.issue || "";
+    cleanParsedValue(
+      values.issue || ""
+    );
 
   const project =
     parseProject(
@@ -538,7 +667,9 @@ function parseIssueData(text: string): {
     );
 
   const location =
-    values.location || "";
+    cleanParsedValue(
+      values.location || ""
+    );
 
   if (
     !description ||
@@ -547,6 +678,18 @@ function parseIssueData(text: string): {
     !category ||
     !priority
   ) {
+    console.log(
+      "PARSE ISSUE DATA FAILED:",
+      {
+        description,
+        project,
+        location,
+        category,
+        priority,
+        rawText: text,
+      }
+    );
+
     return null;
   }
 
@@ -569,9 +712,8 @@ function parseProject(
   const normalized =
     normalizeText(text);
 
-  const number = Number(
-    normalized
-  );
+  const number =
+    Number(normalized);
 
   if (
     Number.isInteger(number) &&
@@ -601,9 +743,8 @@ function parseCategory(
   const normalized =
     normalizeText(text);
 
-  const number = Number(
-    normalized
-  );
+  const number =
+    Number(normalized);
 
   if (
     Number.isInteger(number) &&
@@ -633,9 +774,8 @@ function parsePriority(
   const normalized =
     normalizeText(text);
 
-  const number = Number(
-    normalized
-  );
+  const number =
+    Number(normalized);
 
   if (
     Number.isInteger(number) &&
@@ -657,7 +797,6 @@ function parsePriority(
 
 /* =========================================================
    PROJECT MENU
-   Legacy support
 ========================================================= */
 
 function projectMenu() {
@@ -673,7 +812,6 @@ function projectMenu() {
 
 /* =========================================================
    CATEGORY MENU
-   Legacy support
 ========================================================= */
 
 function categoryMenu() {
@@ -689,7 +827,6 @@ function categoryMenu() {
 
 /* =========================================================
    PRIORITY MENU
-   Legacy support
 ========================================================= */
 
 function priorityMenu() {
@@ -708,19 +845,23 @@ function priorityMenu() {
 function confirmationMessage(
   draft: DraftData
 ) {
-  return `📝 *Konfirmasi Issue*
+  return `📝 *Konfirmasi Laporan*
 
-📝 *Issue:* ${draft.description || "-"}
-📁 *Project:* ${draft.project || "-"}
-📍 *Location:* ${draft.location || "-"}
-🏷️ *Category:* ${draft.category || "-"}
-⚡ *Priority:* ${draft.priority || "-"}
+*Issue:* ${draft.description || "-"}
 
-1️⃣ Ya, Buat
+*Project:* ${draft.project || "-"}
+
+*Location:* ${draft.location || "-"}
+
+*Category:* ${draft.category || "-"}
+
+*Priority:* ${draft.priority || "-"}
+
+Apakah data sudah benar?
+
+1️⃣ Ya, Buat Laporan
 2️⃣ Ubah Data
-3️⃣ Batalkan
-
-Ketik *1-3*.`;
+3️⃣ Batalkan`;
 }
 
 /* =========================================================
@@ -740,7 +881,7 @@ Kirim ulang semua data dalam *1 pesan*:
 *Category:* Hardware / Software / Network / Server / Application / Other
 *Priority:* Critical / High / Medium / Low
 
-Data lama akan diganti.`;
+Data lama akan diganti dengan data baru.`;
 }
 
 /* =========================================================
@@ -751,25 +892,30 @@ async function findActiveIssue(
   phoneNumber: string
 ) {
   try {
-    const { data, error } =
-      await supabase
-        .from("issues")
-        .select(
-          "id, issue_code, title, description, project, location, category, priority, status, reporter, created_at, updated_at"
-        )
-        .eq(
-          "reporter",
-          phoneNumber
-        )
-        .in("status", [
-          "Open",
-          "On Progress",
-        ])
-        .order("created_at", {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("issues")
+      .select(
+        "id, issue_code, title, description, project, location, category, priority, status, reporter, created_at, updated_at"
+      )
+      .eq(
+        "reporter",
+        phoneNumber
+      )
+      .in("status", [
+        "Open",
+        "On Progress",
+      ])
+      .order(
+        "created_at",
+        {
           ascending: false,
-        })
-        .limit(1)
-        .maybeSingle();
+        }
+      )
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.error(
@@ -803,32 +949,34 @@ async function getIssueByCode(
       .trim()
       .toUpperCase();
 
-  const { data, error } =
-    await supabase
-      .from("issues")
-      .select(
-        `
-        id,
-        issue_code,
-        title,
-        description,
-        project,
-        location,
-        category,
-        priority,
-        status,
-        reporter,
-        assignee,
-        resolution,
-        created_at,
-        updated_at
-        `
-      )
-      .ilike(
-        "issue_code",
-        normalizedCode
-      )
-      .maybeSingle();
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("issues")
+    .select(
+      `
+      id,
+      issue_code,
+      title,
+      description,
+      project,
+      location,
+      category,
+      priority,
+      status,
+      reporter,
+      assignee,
+      resolution,
+      created_at,
+      updated_at
+      `
+    )
+    .ilike(
+      "issue_code",
+      normalizedCode
+    )
+    .maybeSingle();
 
   if (error) {
     console.error(
@@ -850,12 +998,9 @@ async function sendIssueStatus(
   phoneNumber: string,
   issueCode: string
 ) {
-  const normalizedCode =
-    issueCode.trim().toUpperCase();
-
   const issue =
     await getIssueByCode(
-      normalizedCode
+      issueCode
     );
 
   if (!issue) {
@@ -863,16 +1008,26 @@ async function sendIssueStatus(
       phoneNumber,
       `❌ *Issue tidak ditemukan.*
 
-*${normalizedCode}*
+Issue Code:
+*${issueCode
+        .trim()
+        .toUpperCase()}*
 
-Pastikan Issue Code benar.
+Pastikan Issue Code sudah benar.
 
 Contoh:
-*ISS-20260916-022*`
+*ISS-20260916-022*
+
+Ketik *STATUS* untuk mencoba lagi.
+Ketik *MENU* untuk kembali.`
     );
 
     return;
   }
+
+  /* =====================================================
+     GET ISSUE HISTORY
+  ===================================================== */
 
   const {
     data: history,
@@ -908,6 +1063,10 @@ Contoh:
       historyError
     );
   }
+
+  /* =====================================================
+     FORMAT HISTORY
+  ===================================================== */
 
   let historyText =
     "Belum ada riwayat perubahan.";
@@ -1001,8 +1160,14 @@ ${
 🕐 ${date}`;
           }
         )
-        .join("\n\n");
+        .join(
+          "\n\n"
+        );
   }
+
+  /* =====================================================
+     FORMAT DATE
+  ===================================================== */
 
   const createdAt =
     issue.created_at
@@ -1034,37 +1199,67 @@ ${
         )
       : "-";
 
+  /* =====================================================
+     SEND DETAIL
+  ===================================================== */
+
   await sendWhatsAppMessage(
     phoneNumber,
-    `🔍 *DETAIL ISSUE*
+    `🔍 *DETAIL STATUS ISSUE*
 
-*${issue.issue_code}*
+━━━━━━━━━━━━━━
 
-📝 *Issue:* ${issue.title || "-"}
-📄 *Description:* ${issue.description || "-"}
-📁 *Project:* ${issue.project || "-"}
-📍 *Location:* ${issue.location || "-"}
-🏷️ *Category:* ${issue.category || "-"}
-⚡ *Priority:* ${issue.priority || "-"}
-📊 *Status:* ${issue.status || "-"}
-👨‍💻 *Assignee:* ${
-      issue.assignee ||
-      "Belum ditugaskan"
-    }
-🛠️ *Resolution:* ${
-      issue.resolution ||
-      "Belum ada"
-    }
+*Issue Code:*
+${issue.issue_code}
 
-📅 Dibuat: ${createdAt}
-🔄 Update: ${updatedAt}
+*Issue:*
+${issue.title || "-"}
 
-📜 *Riwayat*
+*Description:*
+${issue.description || "-"}
+
+*Project:*
+${issue.project || "-"}
+
+*Location:*
+${issue.location || "-"}
+
+*Category:*
+${issue.category || "-"}
+
+*Priority:*
+${issue.priority || "-"}
+
+*Status:*
+${issue.status || "-"}
+
+*Assignee:*
+${issue.assignee || "Belum ditugaskan"}
+
+*Resolution:*
+${issue.resolution || "Belum ada"}
+
+━━━━━━━━━━━━━━
+
+📅 *Dibuat:*
+${createdAt}
+
+🔄 *Update terakhir:*
+${updatedAt}
+
+━━━━━━━━━━━━━━
+
+📜 *Riwayat Terakhir*
+
 ${historyText}
 
-Ketik *STATUS ISSUE-CODE* untuk cek issue lain.
-Ketik *MY ISSUES* untuk melihat laporan.
-Ketik *MENU* untuk menu utama.`
+━━━━━━━━━━━━━━
+
+Ketik *STATUS* untuk cek issue lain.
+
+Ketik *MY ISSUES* untuk melihat laporan Anda.
+
+Ketik *MENU* untuk kembali.`
   );
 }
 
@@ -1075,35 +1270,37 @@ Ketik *MENU* untuk menu utama.`
 async function sendMyIssues(
   phoneNumber: string
 ) {
-  const { data, error } =
-    await supabase
-      .from("issues")
-      .select(
-        `
-        id,
-        issue_code,
-        title,
-        project,
-        location,
-        category,
-        priority,
-        status,
-        assignee,
-        created_at,
-        updated_at
-        `
-      )
-      .eq(
-        "reporter",
-        phoneNumber
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        }
-      )
-      .limit(10);
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("issues")
+    .select(
+      `
+      id,
+      issue_code,
+      title,
+      project,
+      location,
+      category,
+      priority,
+      status,
+      assignee,
+      created_at,
+      updated_at
+      `
+    )
+    .eq(
+      "reporter",
+      phoneNumber
+    )
+    .order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    )
+    .limit(10);
 
   if (error) {
     console.error(
@@ -1113,10 +1310,11 @@ async function sendMyIssues(
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `❌ Gagal mengambil My Issues.
+      `❌ *Gagal mengambil My Issues.*
 
-Coba lagi:
-*MY ISSUES*`
+Silakan coba lagi dengan mengetik:
+
+👉 *MY ISSUES*`
     );
 
     return;
@@ -1138,11 +1336,17 @@ Coba lagi:
 
 Belum ada issue dari nomor WhatsApp ini.
 
-Ketik *BUAT ISSUE* untuk membuat laporan.`
+Ketik *BUAT ISSUE* untuk membuat laporan.
+
+${mainMenu()}`
     );
 
     return;
   }
+
+  /* =====================================================
+     COMPACT ISSUE LIST
+  ===================================================== */
 
   const issueList =
     data
@@ -1151,17 +1355,29 @@ Ketik *BUAT ISSUE* untuk membuat laporan.`
           issue,
           index
         ) => {
-          return `${index + 1}️⃣ *${issue.issue_code}*
-📝 ${issue.title || "-"}
-📁 ${issue.project || "-"} | 📍 ${issue.location || "-"}
-⚡ ${issue.priority || "-"} | 📊 ${issue.status || "-"}`;
+          return `${index + 1}️⃣ *${
+            issue.issue_code
+          }* — ${
+            issue.title || "-"
+          }
+📁 ${issue.project || "-"} · 📍 ${
+            issue.location || "-"
+          }
+📊 ${
+            issue.status || "-"
+          } · ⚡ ${
+            issue.priority || "-"
+          }`;
         }
       )
-      .join("\n\n");
+      .join(
+        "\n\n"
+      );
 
   const myIssueIds =
     data.map(
-      (issue) => issue.id
+      (issue) =>
+        issue.id
     );
 
   const myIssueCodes =
@@ -1187,9 +1403,13 @@ Ketik *BUAT ISSUE* untuk membuat laporan.`
 
 ${issueList}
 
-Ketik nomor untuk melihat detail.
+━━━━━━━━━━━━━━
+
+Ketik nomor issue untuk melihat detail.
+
 Contoh: *1*
 
+Ketik *BUAT ISSUE* untuk laporan baru.
 Ketik *MENU* untuk kembali.`
   );
 }
@@ -1199,7 +1419,8 @@ Ketik *MENU* untuk kembali.`
 ========================================================= */
 
 async function generateIssueCode() {
-  const now = new Date();
+  const now =
+    new Date();
 
   const year =
     now.getFullYear();
@@ -1217,19 +1438,26 @@ async function generateIssueCode() {
   const datePrefix =
     `ISS-${year}${month}${day}-`;
 
-  const { data, error } =
-    await supabase
-      .from("issues")
-      .select("issue_code")
-      .like(
-        "issue_code",
-        `${datePrefix}%`
-      )
-      .order("issue_code", {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("issues")
+    .select(
+      "issue_code"
+    )
+    .like(
+      "issue_code",
+      `${datePrefix}%`
+    )
+    .order(
+      "issue_code",
+      {
         ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+      }
+    )
+    .limit(1)
+    .maybeSingle();
 
   if (error) {
     console.error(
@@ -1238,7 +1466,8 @@ async function generateIssueCode() {
     );
   }
 
-  let nextNumber = 1;
+  let nextNumber =
+    1;
 
   if (data?.issue_code) {
     const lastPart =
@@ -1296,26 +1525,39 @@ async function createIssueFromDraft(
       .insert({
         issue_code:
           issueCode,
+
         title,
+
         description,
+
         project:
           draft.project ||
           null,
+
         location:
           draft.location ||
           null,
+
         category:
           draft.category ||
           "Other",
+
         priority:
           draft.priority ||
           "Medium",
-        status: "Open",
+
+        status:
+          "Open",
+
         reporter:
           phoneNumber,
-        source: "WhatsApp",
+
+        source:
+          "WhatsApp",
+
         created_at:
           new Date().toISOString(),
+
         updated_at:
           new Date().toISOString(),
       })
@@ -1337,7 +1579,10 @@ async function createIssueFromDraft(
         phoneNumber,
         `❌ *Gagal membuat issue.*
 
-Silakan coba lagi:
+Terjadi kesalahan saat menyimpan laporan.
+
+Silakan coba lagi dengan mengetik:
+
 *BUAT ISSUE*`
       );
 
@@ -1352,7 +1597,8 @@ Silakan coba lagi:
       draft.pending_message_id
     ) {
       const {
-        error: linkError,
+        error:
+          linkError,
       } = await supabase
         .from(
           "whatsapp_messages"
@@ -1414,25 +1660,34 @@ Silakan coba lagi:
     }
 
     /* =====================================================
-       SUCCESS
+       SEND SUCCESS
     ===================================================== */
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `✅ *Issue Berhasil Dibuat*
+      `✅ *Laporan Berhasil Dibuat*
 
-*${issue.issue_code}*
+*Issue Code:* ${issue.issue_code}
 
-📝 ${issue.title || "-"}
-📁 ${issue.project || "-"}
-📍 ${issue.location || "-"}
-🏷️ ${issue.category || "-"}
-⚡ ${issue.priority || "-"}
-📊 ${issue.status || "-"}
+*Issue:* ${issue.title || "-"}
 
-Laporan sudah masuk ke Helpdesk.
+*Project:* ${issue.project || "-"}
 
-Ketik *STATUS ${issue.issue_code}* untuk melihat status.`
+*Location:* ${issue.location || "-"}
+
+*Category:* ${issue.category || "-"}
+
+*Priority:* ${issue.priority || "-"}
+
+*Status:* ${issue.status || "-"}
+
+━━━━━━━━━━━━━━
+
+Laporan sudah masuk ke Helpdesk System.
+
+Ketik *STATUS ${issue.issue_code}* untuk cek status.
+
+Ketik *MENU* untuk kembali.`
     );
 
     await saveConversation(
@@ -1468,6 +1723,10 @@ async function handleMenuState(
   text: string
 ) {
   switch (text) {
+    /* =====================================================
+       1. CREATE ISSUE
+    ===================================================== */
+
     case "1": {
       await startCreateIssue(
         phoneNumber
@@ -1481,6 +1740,10 @@ async function handleMenuState(
       return;
     }
 
+    /* =====================================================
+       2. STATUS
+    ===================================================== */
+
     case "2": {
       await saveConversation(
         phoneNumber,
@@ -1492,17 +1755,24 @@ async function handleMenuState(
         phoneNumber,
         `🔍 *Cek Status Issue*
 
-Kirim Issue Code.
+Ketik langsung:
+
+*STATUS ISS-YYYYMMDD-XXX*
 
 Contoh:
 *STATUS ISS-20260916-022*
 
-Atau cukup kirim:
-*ISS-20260916-022*`
+Atau kirim Issue Code saja.
+
+Ketik *BATAL* untuk kembali.`
       );
 
       return;
     }
+
+    /* =====================================================
+       3. MY ISSUES
+    ===================================================== */
 
     case "3": {
       await sendMyIssues(
@@ -1512,21 +1782,36 @@ Atau cukup kirim:
       return;
     }
 
+    /* =====================================================
+       4. HELP
+    ===================================================== */
+
     case "4": {
       await sendWhatsAppMessage(
         phoneNumber,
         helpMessage()
       );
 
+      await saveConversation(
+        phoneNumber,
+        "MENU",
+        {}
+      );
+
       return;
     }
+
+    /* =====================================================
+       5. AGENT
+    ===================================================== */
 
     case "5": {
       await saveConversation(
         phoneNumber,
         "AGENT",
         {
-          agent_ack_sent: false,
+          agent_ack_sent:
+            false,
         }
       );
 
@@ -1547,9 +1832,11 @@ Ketik *MENU* untuk kembali.`
     default: {
       await sendWhatsAppMessage(
         phoneNumber,
-        `❌ Pilihan tidak valid.
+        `❌ *Pilihan tidak valid.*
 
-Ketik *1-5*.`
+Ketik angka *1-5*.
+
+${mainMenu()}`
       );
 
       return;
@@ -1580,21 +1867,6 @@ async function handleConversationState(
     ===================================================== */
 
     case "WELCOME": {
-      if (text === "MENU") {
-        await saveConversation(
-          phoneNumber,
-          "MENU",
-          {}
-        );
-
-        await sendWhatsAppMessage(
-          phoneNumber,
-          mainMenu()
-        );
-
-        return;
-      }
-
       if (
         [
           "1",
@@ -1614,9 +1886,7 @@ async function handleConversationState(
 
       await sendWhatsAppMessage(
         phoneNumber,
-        `❌ Pilihan tidak valid.
-
-Ketik *1-5*.`
+        welcomeMessage()
       );
 
       return;
@@ -1679,7 +1949,7 @@ Ketik *1-5*.`
 
         await sendWhatsAppMessage(
           phoneNumber,
-          `✅ Pesan ditambahkan ke issue:
+          `✅ Pesan berhasil ditambahkan ke issue:
 
 *${draft.active_issue_code || "-"}*
 
@@ -1693,12 +1963,23 @@ Ketik *MENU* untuk kembali.`
       }
 
       if (text === "2") {
-        /*
-         * Buat issue baru langsung menggunakan
-         * format 5 field dalam 1 pesan.
-         */
-        await startCreateIssue(
-          phoneNumber
+        await saveConversation(
+          phoneNumber,
+          "WAITING_ISSUE_DATA",
+          {
+            started_at:
+              draft.started_at ||
+              new Date().toISOString(),
+
+            pending_message_id:
+              draft.pending_message_id ||
+              messageId ||
+              undefined,
+
+            pending_message_text:
+              draft.pending_message_text ||
+              "",
+          }
         );
 
         await sendWhatsAppMessage(
@@ -1772,32 +2053,44 @@ Ketik *MENU* untuk kembali.`
           phoneNumber,
           `❌ *Data belum lengkap.*
 
-Kirim 5 data dalam *1 pesan*:
+Pastikan 5 data dikirim dalam *1 pesan*:
 
 *Issue:* ...
 *Project:* ...
 *Location:* ...
 *Category:* ...
-*Priority:* ...`
+*Priority:* ...
+
+Contoh:
+*Issue:* Borescope rusak
+*Project:* TAM
+*Location:* NVDC Karawang
+*Category:* Hardware
+*Priority:* Critical`
         );
 
         return;
       }
 
-      const updatedDraft: DraftData = {
-        ...draft,
-        ...parsed,
-        started_at:
-          draft.started_at ||
-          new Date().toISOString(),
-        pending_message_id:
-          draft.pending_message_id ||
-          messageId ||
-          undefined,
-        pending_message_text:
-          draft.pending_message_text ||
-          text,
-      };
+      const updatedDraft: DraftData =
+        {
+          ...draft,
+
+          ...parsed,
+
+          started_at:
+            draft.started_at ||
+            new Date().toISOString(),
+
+          pending_message_id:
+            draft.pending_message_id ||
+            messageId ||
+            undefined,
+
+          pending_message_text:
+            draft.pending_message_text ||
+            text,
+        };
 
       await saveConversation(
         phoneNumber,
@@ -1824,16 +2117,12 @@ Kirim 5 data dalam *1 pesan*:
     case "WAITING_LOCATION":
     case "WAITING_CATEGORY":
     case "WAITING_PRIORITY": {
-      /*
-       * Conversation lama tetap aman.
-       * Semua diarahkan ke format baru.
-       */
-
       await saveConversation(
         phoneNumber,
         "WAITING_ISSUE_DATA",
         {
           ...draft,
+
           started_at:
             draft.started_at ||
             new Date().toISOString(),
@@ -1896,7 +2185,7 @@ Kirim 5 data dalam *1 pesan*:
           phoneNumber,
           `❌ *Pembuatan issue dibatalkan.*
 
-Ketik *MENU* untuk layanan utama.`
+Ketik *MENU* untuk kembali.`
         );
 
         return;
@@ -1906,9 +2195,9 @@ Ketik *MENU* untuk layanan utama.`
         phoneNumber,
         `❌ Pilihan tidak valid.
 
-1️⃣ Buat Issue
-2️⃣ Ubah Data
-3️⃣ Batalkan`
+${confirmationMessage(
+  draft
+)}`
       );
 
       return;
@@ -1923,13 +2212,16 @@ Ketik *MENU* untuk layanan utama.`
         parseIssueData(text);
 
       if (parsed) {
-        const updatedDraft: DraftData = {
-          ...draft,
-          ...parsed,
-          started_at:
-            draft.started_at ||
-            new Date().toISOString(),
-        };
+        const updatedDraft: DraftData =
+          {
+            ...draft,
+
+            ...parsed,
+
+            started_at:
+              draft.started_at ||
+              new Date().toISOString(),
+          };
 
         await saveConversation(
           phoneNumber,
@@ -1969,7 +2261,7 @@ Ketik *MENU* untuk layanan utama.`
 
       await sendWhatsAppMessage(
         phoneNumber,
-        `❌ *Format belum lengkap.*
+        `❌ *Format data belum lengkap.*
 
 ${editMenu(draft)}`
       );
@@ -2030,10 +2322,12 @@ Contoh:
       ) {
         await sendWhatsAppMessage(
           phoneNumber,
-          `❌ Pilihan tidak valid.
+          `❌ *Pilihan tidak valid.*
 
-Ketik nomor issue dari daftar.
-Contoh: *1*`
+Ketik nomor issue sesuai daftar.
+
+Contoh:
+*1*`
         );
 
         return;
@@ -2104,7 +2398,7 @@ Ketik *MENU* untuk kembali.`
 
       /*
        * Hanya pesan pertama yang mendapat
-       * auto acknowledgment.
+       * acknowledgment otomatis.
        */
 
       if (
@@ -2114,7 +2408,7 @@ Ketik *MENU* untuk kembali.`
           phoneNumber,
           `📨 *Pesan diterima Helpdesk.*
 
-Tim Helpdesk akan menindaklanjuti.
+Tim Helpdesk akan menindaklanjuti pesan Anda.
 
 Ketik *MENU* untuk kembali.`
         );
@@ -2188,7 +2482,9 @@ async function processIncomingMessage(
 
   let rawText = "";
 
-  if (message.type === "text") {
+  if (
+    message.type === "text"
+  ) {
     rawText =
       message.text?.body ||
       "";
@@ -2211,7 +2507,9 @@ async function processIncomingMessage(
   }
 
   const text =
-    normalizeText(rawText);
+    normalizeText(
+      rawText
+    );
 
   /* =====================================================
      GET CONVERSATION
@@ -2223,7 +2521,7 @@ async function processIncomingMessage(
     );
 
   /* =====================================================
-     CHECK TIMEOUT
+     CHECK 30 MINUTE INACTIVITY
   ===================================================== */
 
   if (
@@ -2244,8 +2542,11 @@ async function processIncomingMessage(
 
     conversation = {
       ...conversation,
+
       state: "IDLE",
+
       draft_data: {},
+
       updated_at:
         new Date().toISOString(),
     };
@@ -2269,7 +2570,7 @@ async function processIncomingMessage(
       phoneNumber,
       `❌ *Proses dibatalkan.*
 
-Ketik *MENU* untuk layanan utama.`
+Ketik *MENU* untuk kembali.`
     );
 
     return;
@@ -2279,7 +2580,9 @@ Ketik *MENU* untuk layanan utama.`
      GLOBAL COMMAND: MENU
   ===================================================== */
 
-  if (text === "MENU") {
+  if (
+    text === "MENU"
+  ) {
     await saveConversation(
       phoneNumber,
       "MENU",
@@ -2316,13 +2619,16 @@ Ketik *MENU* untuk layanan utama.`
   }
 
   /* =====================================================
-     GLOBAL COMMAND: STATUS <CODE>
-     Direct status lookup
+     GLOBAL COMMAND: STATUS DIRECT
   ===================================================== */
 
   if (
-    text.startsWith("STATUS ") ||
-    text.startsWith("CEK STATUS ")
+    text.startsWith(
+      "STATUS "
+    ) ||
+    text.startsWith(
+      "CEK STATUS "
+    )
   ) {
     const issueCode =
       text
@@ -2353,29 +2659,6 @@ Ketik *MENU* untuk layanan utama.`
   }
 
   /* =====================================================
-     GLOBAL COMMAND: ISSUE CODE DIRECT
-  ===================================================== */
-
-  if (
-    /^ISS-\d{8}-\d{3}$/i.test(
-      text
-    )
-  ) {
-    await sendIssueStatus(
-      phoneNumber,
-      text
-    );
-
-    await saveConversation(
-      phoneNumber,
-      "MENU",
-      {}
-    );
-
-    return;
-  }
-
-  /* =====================================================
      GLOBAL COMMAND: STATUS
   ===================================================== */
 
@@ -2393,10 +2676,16 @@ Ketik *MENU* untuk layanan utama.`
       phoneNumber,
       `🔍 *Cek Status Issue*
 
-Kirim Issue Code.
+Ketik langsung:
+
+*STATUS ISS-YYYYMMDD-XXX*
+
+atau kirim Issue Code saja.
 
 Contoh:
-*ISS-20260916-022*`
+*ISS-20260916-022*
+
+Ketik *BATAL* untuk kembali.`
     );
 
     return;
@@ -2404,7 +2693,7 @@ Contoh:
 
   /* =====================================================
      GLOBAL COMMAND: MY ISSUES
-  ===================================================== */
+  ========================================================= */
 
   if (
     text === "MY ISSUES" ||
@@ -2420,7 +2709,7 @@ Contoh:
 
   /* =====================================================
      GLOBAL COMMAND: BANTUAN
-  ===================================================== */
+  ========================================================= */
 
   if (
     text === "BANTUAN" ||
@@ -2431,12 +2720,18 @@ Contoh:
       helpMessage()
     );
 
+    await saveConversation(
+      phoneNumber,
+      "MENU",
+      {}
+    );
+
     return;
   }
 
   /* =====================================================
      GLOBAL COMMAND: AGENT
-  ===================================================== */
+  ========================================================= */
 
   if (
     text === "AGENT" ||
@@ -2446,7 +2741,8 @@ Contoh:
       phoneNumber,
       "AGENT",
       {
-        agent_ack_sent: false,
+        agent_ack_sent:
+          false,
       }
     );
 
@@ -2456,7 +2752,7 @@ Contoh:
 
 Silakan kirim pesan Anda.
 
-Pesan pertama mendapat konfirmasi otomatis.
+Pesan pertama akan mendapat konfirmasi otomatis.
 
 Ketik *MENU* untuk kembali.`
     );
@@ -2466,7 +2762,7 @@ Ketik *MENU* untuk kembali.`
 
   /* =====================================================
      HANDLE CURRENT STATE
-  ===================================================== */
+  ========================================================= */
 
   await handleConversationState(
     phoneNumber,
@@ -2485,7 +2781,8 @@ export async function GET(
 ) {
   try {
     const searchParams =
-      request.nextUrl.searchParams;
+      request.nextUrl
+        .searchParams;
 
     const mode =
       searchParams.get(
@@ -2514,7 +2811,8 @@ export async function GET(
     );
 
     if (
-      mode === "subscribe" &&
+      mode ===
+        "subscribe" &&
       token ===
         whatsappVerifyToken
     ) {
@@ -2577,7 +2875,9 @@ export async function POST(
     ) {
       return NextResponse.json(
         {
-          success: false,
+          success:
+            false,
+
           message:
             "Invalid webhook object",
         },
@@ -2594,14 +2894,16 @@ export async function POST(
       const entry of entries
     ) {
       const changes =
-        entry.changes || [];
+        entry.changes ||
+        [];
 
       for (
         const change of changes
       ) {
         const messages =
           change.value
-            ?.messages || [];
+            ?.messages ||
+          [];
 
         for (
           const message of messages
