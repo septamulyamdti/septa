@@ -73,13 +73,16 @@ type WhatsAppMessage = {
   from?: string;
   timestamp?: string;
   type?: string;
+
   text?: {
     body?: string;
   };
+
   image?: {
     id?: string;
     caption?: string;
   };
+
   document?: {
     id?: string;
     filename?: string;
@@ -89,6 +92,7 @@ type WhatsAppMessage = {
 
 type WhatsAppWebhookBody = {
   object?: string;
+
   entry?: Array<{
     changes?: Array<{
       value?: {
@@ -230,9 +234,28 @@ function helpMessage() {
 
 /* =========================================================
    NORMALIZE TEXT
+   IMPORTANT:
+   - Spasi dan TAB dirapikan
+   - ENTER / NEWLINE TETAP DIPERTAHANKAN
 ========================================================= */
 
 function normalizeText(
+  value: string | undefined | null
+) {
+  return (value || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+/* =========================================================
+   NORMALIZE COMMAND TEXT
+   Digunakan untuk command seperti MENU, STATUS, dll.
+========================================================= */
+
+function normalizeCommandText(
   value: string | undefined | null
 ) {
   return (value || "")
@@ -253,7 +276,7 @@ function cleanParsedValue(
     .replace(/\*/g, "")
     .replace(/`/g, "")
     .trim()
-    .replace(/\s+/g, " ");
+    .replace(/[ \t]+/g, " ");
 }
 
 /* =========================================================
@@ -275,16 +298,14 @@ function parseFieldLine(
   }
 
   /*
-   * Hilangkan markdown "*" yang biasa ikut
-   * terkirim dari WhatsApp.
+   * Support:
    *
-   * Contoh yang didukung:
-   *
-   *Issue:* Borescope Rusak
-   *Issue*: Borescope Rusak
-   Issue: Borescope Rusak
-   Issue\:Borescope Rusak
-   Issue:*Borescope Rusak*
+   * Issue: Printer rusak
+   * Issue\: Printer rusak
+   * *Issue:* Printer rusak
+   * *Issue*: Printer rusak
+   * Issue:* Printer rusak
+   * *Issue:*Printer rusak*
    */
 
   cleaned = cleaned
@@ -304,7 +325,9 @@ function parseFieldLine(
     match[1].toLowerCase();
 
   const value =
-    cleanParsedValue(match[2]);
+    cleanParsedValue(
+      match[2]
+    );
 
   return {
     key,
@@ -325,14 +348,19 @@ async function sendWhatsAppMessage(
       `https://graph.facebook.com/v23.0/${whatsappPhoneNumberId}/messages`,
       {
         method: "POST",
+
         headers: {
           Authorization: `Bearer ${whatsappAccessToken}`,
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           messaging_product: "whatsapp",
+
           to,
+
           type: "text",
+
           text: {
             preview_url: false,
             body: message,
@@ -341,7 +369,8 @@ async function sendWhatsAppMessage(
       }
     );
 
-    const result = await response.json();
+    const result =
+      await response.json();
 
     if (!response.ok) {
       console.error(
@@ -394,9 +423,12 @@ async function saveWhatsAppMessage(
 
     let messageText = "";
 
-    if (message.type === "text") {
+    if (
+      message.type === "text"
+    ) {
       messageText =
-        message.text?.body || "";
+        message.text?.body ||
+        "";
     } else if (
       message.type === "image"
     ) {
@@ -418,8 +450,9 @@ async function saveWhatsAppMessage(
     const createdAt =
       message.timestamp
         ? new Date(
-            Number(message.timestamp) *
-              1000
+            Number(
+              message.timestamp
+            ) * 1000
           ).toISOString()
         : new Date().toISOString();
 
@@ -429,13 +462,24 @@ async function saveWhatsAppMessage(
     } = await supabase
       .from("whatsapp_messages")
       .insert({
-        message_id: messageId,
-        phone_number: phoneNumber,
-        direction: "incoming",
+        message_id:
+          messageId,
+
+        phone_number:
+          phoneNumber,
+
+        direction:
+          "incoming",
+
         message_type:
-          message.type || "unknown",
-        message_text: messageText,
-        created_at: createdAt,
+          message.type ||
+          "unknown",
+
+        message_text:
+          messageText,
+
+        created_at:
+          createdAt,
       })
       .select("id")
       .single();
@@ -490,16 +534,22 @@ async function getConversation(
 
   if (!data) {
     return {
-      phone_number: phoneNumber,
-      state: "IDLE",
+      phone_number:
+        phoneNumber,
+
+      state:
+        "IDLE",
+
       draft_data: {},
     };
   }
 
   return {
     ...data,
+
     draft_data:
-      data.draft_data || {},
+      data.draft_data ||
+      {},
   };
 }
 
@@ -520,9 +570,14 @@ async function saveConversation(
     )
     .upsert(
       {
-        phone_number: phoneNumber,
+        phone_number:
+          phoneNumber,
+
         state,
-        draft_data: draftData,
+
+        draft_data:
+          draftData,
+
         updated_at:
           new Date().toISOString(),
       },
@@ -547,7 +602,9 @@ async function saveConversation(
 function isConversationExpired(
   conversation: Conversation
 ) {
-  if (!conversation.updated_at) {
+  if (
+    !conversation.updated_at
+  ) {
     return false;
   }
 
@@ -557,13 +614,16 @@ function isConversationExpired(
     ).getTime();
 
   if (
-    Number.isNaN(lastActivity)
+    Number.isNaN(
+      lastActivity
+    )
   ) {
     return false;
   }
 
   return (
-    Date.now() - lastActivity >=
+    Date.now() -
+      lastActivity >=
     CONVERSATION_TIMEOUT_MS
   );
 }
@@ -621,11 +681,23 @@ function parseIssueData(
   category: string;
   priority: string;
 } | null {
-  const lines =
+  /*
+   * IMPORTANT:
+   * Jangan gunakan normalizeCommandText() di sini
+   * karena command normalizer menghilangkan newline.
+   */
+
+  const normalizedInput =
     text
-      .split(/\r?\n/)
-      .map((line) =>
-        line.trim()
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+
+  const lines =
+    normalizedInput
+      .split("\n")
+      .map(
+        (line) =>
+          line.trim()
       )
       .filter(Boolean);
 
@@ -634,7 +706,9 @@ function parseIssueData(
     string
   > = {};
 
-  for (const line of lines) {
+  for (
+    const line of lines
+  ) {
     const parsed =
       parseFieldLine(line);
 
@@ -642,34 +716,51 @@ function parseIssueData(
       continue;
     }
 
-    values[parsed.key] =
-      parsed.value;
+    values[
+      parsed.key
+    ] = parsed.value;
   }
 
   const description =
     cleanParsedValue(
-      values.issue || ""
+      values.issue ||
+        ""
     );
 
   const project =
     parseProject(
-      values.project || ""
-    );
-
-  const category =
-    parseCategory(
-      values.category || ""
-    );
-
-  const priority =
-    parsePriority(
-      values.priority || ""
+      values.project ||
+        ""
     );
 
   const location =
     cleanParsedValue(
-      values.location || ""
+      values.location ||
+        ""
     );
+
+  const category =
+    parseCategory(
+      values.category ||
+        ""
+    );
+
+  const priority =
+    parsePriority(
+      values.priority ||
+        ""
+    );
+
+  console.log(
+    "PARSED ISSUE DATA:",
+    {
+      description,
+      project,
+      location,
+      category,
+      priority,
+    }
+  );
 
   if (
     !description ||
@@ -681,12 +772,13 @@ function parseIssueData(
     console.log(
       "PARSE ISSUE DATA FAILED:",
       {
+        rawText: text,
+        values,
         description,
         project,
         location,
         category,
         priority,
-        rawText: text,
       }
     );
 
@@ -710,17 +802,24 @@ function parseProject(
   text: string
 ): string | null {
   const normalized =
-    normalizeText(text);
+    normalizeCommandText(
+      text
+    );
 
   const number =
     Number(normalized);
 
   if (
-    Number.isInteger(number) &&
+    Number.isInteger(
+      number
+    ) &&
     number >= 1 &&
-    number <= PROJECTS.length
+    number <=
+      PROJECTS.length
   ) {
-    return PROJECTS[number - 1];
+    return PROJECTS[
+      number - 1
+    ];
   }
 
   const found =
@@ -741,17 +840,24 @@ function parseCategory(
   text: string
 ): string | null {
   const normalized =
-    normalizeText(text);
+    normalizeCommandText(
+      text
+    );
 
   const number =
     Number(normalized);
 
   if (
-    Number.isInteger(number) &&
+    Number.isInteger(
+      number
+    ) &&
     number >= 1 &&
-    number <= CATEGORIES.length
+    number <=
+      CATEGORIES.length
   ) {
-    return CATEGORIES[number - 1];
+    return CATEGORIES[
+      number - 1
+    ];
   }
 
   const found =
@@ -772,17 +878,24 @@ function parsePriority(
   text: string
 ): string | null {
   const normalized =
-    normalizeText(text);
+    normalizeCommandText(
+      text
+    );
 
   const number =
     Number(normalized);
 
   if (
-    Number.isInteger(number) &&
+    Number.isInteger(
+      number
+    ) &&
     number >= 1 &&
-    number <= PRIORITIES.length
+    number <=
+      PRIORITIES.length
   ) {
-    return PRIORITIES[number - 1];
+    return PRIORITIES[
+      number - 1
+    ];
   }
 
   const found =
@@ -847,15 +960,30 @@ function confirmationMessage(
 ) {
   return `📝 *Konfirmasi Laporan*
 
-*Issue:* ${draft.description || "-"}
+*Issue:* ${
+    draft.description ||
+    "-"
+  }
 
-*Project:* ${draft.project || "-"}
+*Project:* ${
+    draft.project ||
+    "-"
+  }
 
-*Location:* ${draft.location || "-"}
+*Location:* ${
+    draft.location ||
+    "-"
+  }
 
-*Category:* ${draft.category || "-"}
+*Category:* ${
+    draft.category ||
+    "-"
+  }
 
-*Priority:* ${draft.priority || "-"}
+*Priority:* ${
+    draft.priority ||
+    "-"
+  }
 
 Apakah data sudah benar?
 
@@ -1031,9 +1159,12 @@ Ketik *MENU* untuk kembali.`
 
   const {
     data: history,
-    error: historyError,
+    error:
+      historyError,
   } = await supabase
-    .from("issue_history")
+    .from(
+      "issue_history"
+    )
     .select(
       `
       action,
@@ -1052,7 +1183,8 @@ Ketik *MENU* untuk kembali.`
     .order(
       "created_at",
       {
-        ascending: false,
+        ascending:
+          false,
       }
     )
     .limit(5);
@@ -1234,10 +1366,16 @@ ${issue.priority || "-"}
 ${issue.status || "-"}
 
 *Assignee:*
-${issue.assignee || "Belum ditugaskan"}
+${
+  issue.assignee ||
+  "Belum ditugaskan"
+}
 
 *Resolution:*
-${issue.resolution || "Belum ada"}
+${
+  issue.resolution ||
+  "Belum ada"
+}
 
 ━━━━━━━━━━━━━━
 
@@ -1297,7 +1435,8 @@ async function sendMyIssues(
     .order(
       "created_at",
       {
-        ascending: false,
+        ascending:
+          false,
       }
     )
     .limit(10);
@@ -1312,7 +1451,7 @@ async function sendMyIssues(
       phoneNumber,
       `❌ *Gagal mengambil My Issues.*
 
-Silakan coba lagi dengan mengetik:
+Silakan coba lagi dengan:
 
 👉 *MY ISSUES*`
     );
@@ -1358,15 +1497,22 @@ ${mainMenu()}`
           return `${index + 1}️⃣ *${
             issue.issue_code
           }* — ${
-            issue.title || "-"
+            issue.title ||
+            "-"
           }
-📁 ${issue.project || "-"} · 📍 ${
-            issue.location || "-"
+📁 ${
+            issue.project ||
+            "-"
+          } · 📍 ${
+            issue.location ||
+            "-"
           }
 📊 ${
-            issue.status || "-"
+            issue.status ||
+            "-"
           } · ⚡ ${
-            issue.priority || "-"
+            issue.priority ||
+            "-"
           }`;
         }
       )
@@ -1392,6 +1538,7 @@ ${mainMenu()}`
     {
       my_issue_ids:
         myIssueIds,
+
       my_issue_codes:
         myIssueCodes,
     }
@@ -1453,7 +1600,8 @@ async function generateIssueCode() {
     .order(
       "issue_code",
       {
-        ascending: false,
+        ascending:
+          false,
       }
     )
     .limit(1)
@@ -1469,7 +1617,9 @@ async function generateIssueCode() {
   let nextNumber =
     1;
 
-  if (data?.issue_code) {
+  if (
+    data?.issue_code
+  ) {
     const lastPart =
       data.issue_code
         .split("-")
@@ -1510,7 +1660,8 @@ async function createIssueFromDraft(
       "Issue dari WhatsApp";
 
     const title =
-      description.length > 100
+      description.length >
+      100
         ? `${description.substring(
             0,
             97
@@ -1581,7 +1732,7 @@ async function createIssueFromDraft(
 
 Terjadi kesalahan saat menyimpan laporan.
 
-Silakan coba lagi dengan mengetik:
+Silakan coba lagi:
 
 *BUAT ISSUE*`
       );
@@ -1651,7 +1802,9 @@ Silakan coba lagi dengan mengetik:
           draft.started_at
         );
 
-      if (bulkLinkError) {
+      if (
+        bulkLinkError
+      ) {
         console.error(
           "BULK LINK WHATSAPP MESSAGE ERROR:",
           bulkLinkError
@@ -1667,25 +1820,47 @@ Silakan coba lagi dengan mengetik:
       phoneNumber,
       `✅ *Laporan Berhasil Dibuat*
 
-*Issue Code:* ${issue.issue_code}
+*Issue Code:* ${
+        issue.issue_code
+      }
 
-*Issue:* ${issue.title || "-"}
+*Issue:* ${
+        issue.title ||
+        "-"
+      }
 
-*Project:* ${issue.project || "-"}
+*Project:* ${
+        issue.project ||
+        "-"
+      }
 
-*Location:* ${issue.location || "-"}
+*Location:* ${
+        issue.location ||
+        "-"
+      }
 
-*Category:* ${issue.category || "-"}
+*Category:* ${
+        issue.category ||
+        "-"
+      }
 
-*Priority:* ${issue.priority || "-"}
+*Priority:* ${
+        issue.priority ||
+        "-"
+      }
 
-*Status:* ${issue.status || "-"}
+*Status:* ${
+        issue.status ||
+        "-"
+      }
 
 ━━━━━━━━━━━━━━
 
 Laporan sudah masuk ke Helpdesk System.
 
-Ketik *STATUS ${issue.issue_code}* untuk cek status.
+Ketik *STATUS ${
+        issue.issue_code
+      }* untuk cek status.
 
 Ketik *MENU* untuk kembali.`
     );
@@ -1722,9 +1897,11 @@ async function handleMenuState(
   phoneNumber: string,
   text: string
 ) {
-  switch (text) {
+  switch (
+    text
+  ) {
     /* =====================================================
-       1. CREATE ISSUE
+       CREATE ISSUE
     ===================================================== */
 
     case "1": {
@@ -1741,7 +1918,7 @@ async function handleMenuState(
     }
 
     /* =====================================================
-       2. STATUS
+       STATUS
     ===================================================== */
 
     case "2": {
@@ -1771,7 +1948,7 @@ Ketik *BATAL* untuk kembali.`
     }
 
     /* =====================================================
-       3. MY ISSUES
+       MY ISSUES
     ===================================================== */
 
     case "3": {
@@ -1783,7 +1960,7 @@ Ketik *BATAL* untuk kembali.`
     }
 
     /* =====================================================
-       4. HELP
+       HELP
     ===================================================== */
 
     case "4": {
@@ -1802,7 +1979,7 @@ Ketik *BATAL* untuk kembali.`
     }
 
     /* =====================================================
-       5. AGENT
+       AGENT
     ===================================================== */
 
     case "5": {
@@ -1861,7 +2038,9 @@ async function handleConversationState(
     conversation.draft_data ||
     {};
 
-  switch (state) {
+  switch (
+    state
+  ) {
     /* =====================================================
        WELCOME
     ===================================================== */
@@ -1910,7 +2089,9 @@ async function handleConversationState(
     ===================================================== */
 
     case "CONFIRMING_ACTIVE_ISSUE": {
-      if (text === "1") {
+      if (
+        text === "1"
+      ) {
         const activeIssueId =
           draft.active_issue_id;
 
@@ -1962,7 +2143,9 @@ Ketik *MENU* untuk kembali.`
         return;
       }
 
-      if (text === "2") {
+      if (
+        text === "2"
+      ) {
         await saveConversation(
           phoneNumber,
           "WAITING_ISSUE_DATA",
@@ -1990,7 +2173,9 @@ Ketik *MENU* untuk kembali.`
         return;
       }
 
-      if (text === "3") {
+      if (
+        text === "3"
+      ) {
         if (
           draft.active_issue_code
         ) {
@@ -2046,7 +2231,9 @@ Ketik *MENU* untuk kembali.`
 
     case "WAITING_ISSUE_DATA": {
       const parsed =
-        parseIssueData(text);
+        parseIssueData(
+          text
+        );
 
       if (!parsed) {
         await sendWhatsAppMessage(
@@ -2109,7 +2296,7 @@ Contoh:
     }
 
     /* =====================================================
-       LEGACY STEP-BY-STEP STATES
+       LEGACY STATES
     ===================================================== */
 
     case "WAITING_DESCRIPTION":
@@ -2155,7 +2342,9 @@ Contoh:
         return;
       }
 
-      if (text === "2") {
+      if (
+        text === "2"
+      ) {
         await saveConversation(
           phoneNumber,
           "EDITING_ISSUE",
@@ -2209,7 +2398,9 @@ ${confirmationMessage(
 
     case "EDITING_ISSUE": {
       const parsed =
-        parseIssueData(text);
+        parseIssueData(
+          text
+        );
 
       if (parsed) {
         const updatedDraft: DraftData =
@@ -2316,7 +2507,8 @@ Contoh:
         !Number.isInteger(
           selectedNumber
         ) ||
-        selectedNumber < 1 ||
+        selectedNumber <
+          1 ||
         selectedNumber >
           issueCodes.length
       ) {
@@ -2395,11 +2587,6 @@ Ketik *MENU* untuk kembali.`
 
         return;
       }
-
-      /*
-       * Hanya pesan pertama yang mendapat
-       * acknowledgment otomatis.
-       */
 
       if (
         !draft.agent_ack_sent
@@ -2506,10 +2693,43 @@ async function processIncomingMessage(
       `[${message.type || "UNKNOWN"}]`;
   }
 
+  /*
+   * IMPORTANT:
+   *
+   * normalizeText() mempertahankan newline.
+   *
+   * Ini wajib untuk input:
+   *
+   * Issue: ...
+   * Project: ...
+   * Location: ...
+   * Category: ...
+   * Priority: ...
+   */
+
   const text =
     normalizeText(
       rawText
     );
+
+  const commandText =
+    normalizeCommandText(
+      rawText
+    );
+
+  console.log(
+    "WHATSAPP RAW TEXT:",
+    JSON.stringify(
+      rawText
+    )
+  );
+
+  console.log(
+    "WHATSAPP NORMALIZED TEXT:",
+    JSON.stringify(
+      text
+    )
+  );
 
   /* =====================================================
      GET CONVERSATION
@@ -2521,7 +2741,7 @@ async function processIncomingMessage(
     );
 
   /* =====================================================
-     CHECK 30 MINUTE INACTIVITY
+     CHECK TIMEOUT
   ===================================================== */
 
   if (
@@ -2543,9 +2763,11 @@ async function processIncomingMessage(
     conversation = {
       ...conversation,
 
-      state: "IDLE",
+      state:
+        "IDLE",
 
-      draft_data: {},
+      draft_data:
+        {},
 
       updated_at:
         new Date().toISOString(),
@@ -2557,8 +2779,10 @@ async function processIncomingMessage(
   ===================================================== */
 
   if (
-    text === "BATAL" ||
-    text === "CANCEL"
+    commandText ===
+      "BATAL" ||
+    commandText ===
+      "CANCEL"
   ) {
     await saveConversation(
       phoneNumber,
@@ -2581,7 +2805,8 @@ Ketik *MENU* untuk kembali.`
   ===================================================== */
 
   if (
-    text === "MENU"
+    commandText ===
+    "MENU"
   ) {
     await saveConversation(
       phoneNumber,
@@ -2602,9 +2827,12 @@ Ketik *MENU* untuk kembali.`
   ===================================================== */
 
   if (
-    text === "BUAT ISSUE" ||
-    text === "BUAT LAPORAN" ||
-    text === "CREATE ISSUE"
+    commandText ===
+      "BUAT ISSUE" ||
+    commandText ===
+      "BUAT LAPORAN" ||
+    commandText ===
+      "CREATE ISSUE"
   ) {
     await startCreateIssue(
       phoneNumber
@@ -2623,15 +2851,15 @@ Ketik *MENU* untuk kembali.`
   ===================================================== */
 
   if (
-    text.startsWith(
+    commandText.startsWith(
       "STATUS "
     ) ||
-    text.startsWith(
+    commandText.startsWith(
       "CEK STATUS "
     )
   ) {
     const issueCode =
-      text
+      commandText
         .replace(
           /^STATUS\s+/i,
           ""
@@ -2642,7 +2870,9 @@ Ketik *MENU* untuk kembali.`
         )
         .trim();
 
-    if (issueCode) {
+    if (
+      issueCode
+    ) {
       await sendIssueStatus(
         phoneNumber,
         issueCode
@@ -2663,8 +2893,10 @@ Ketik *MENU* untuk kembali.`
   ===================================================== */
 
   if (
-    text === "STATUS" ||
-    text === "CEK STATUS"
+    commandText ===
+      "STATUS" ||
+    commandText ===
+      "CEK STATUS"
   ) {
     await saveConversation(
       phoneNumber,
@@ -2693,12 +2925,15 @@ Ketik *BATAL* untuk kembali.`
 
   /* =====================================================
      GLOBAL COMMAND: MY ISSUES
-  ========================================================= */
+  ===================================================== */
 
   if (
-    text === "MY ISSUES" ||
-    text === "MY ISSUE" ||
-    text === "RIWAYAT"
+    commandText ===
+      "MY ISSUES" ||
+    commandText ===
+      "MY ISSUE" ||
+    commandText ===
+      "RIWAYAT"
   ) {
     await sendMyIssues(
       phoneNumber
@@ -2709,11 +2944,13 @@ Ketik *BATAL* untuk kembali.`
 
   /* =====================================================
      GLOBAL COMMAND: BANTUAN
-  ========================================================= */
+  ===================================================== */
 
   if (
-    text === "BANTUAN" ||
-    text === "HELP"
+    commandText ===
+      "BANTUAN" ||
+    commandText ===
+      "HELP"
   ) {
     await sendWhatsAppMessage(
       phoneNumber,
@@ -2731,11 +2968,13 @@ Ketik *BATAL* untuk kembali.`
 
   /* =====================================================
      GLOBAL COMMAND: AGENT
-  ========================================================= */
+  ===================================================== */
 
   if (
-    text === "AGENT" ||
-    text === "HELPDESK"
+    commandText ===
+      "AGENT" ||
+    commandText ===
+      "HELPDESK"
   ) {
     await saveConversation(
       phoneNumber,
@@ -2762,7 +3001,7 @@ Ketik *MENU* untuk kembali.`
 
   /* =====================================================
      HANDLE CURRENT STATE
-  ========================================================= */
+  ===================================================== */
 
   await handleConversationState(
     phoneNumber,
@@ -2803,8 +3042,10 @@ export async function GET(
       "WHATSAPP WEBHOOK VERIFY:",
       {
         mode,
+
         tokenReceived:
           !!token,
+
         challengeReceived:
           !!challenge,
       }
@@ -2866,7 +3107,9 @@ export async function POST(
 
     console.log(
       "WHATSAPP WEBHOOK BODY:",
-      JSON.stringify(body)
+      JSON.stringify(
+        body
+      )
     );
 
     if (
@@ -2935,6 +3178,11 @@ export async function POST(
       "WHATSAPP WEBHOOK POST ERROR:",
       error
     );
+
+    /*
+     * Tetap 200 agar Meta tidak melakukan
+     * retry webhook terus-menerus.
+     */
 
     return NextResponse.json(
       {
