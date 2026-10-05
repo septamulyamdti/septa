@@ -24,6 +24,7 @@ type ConversationState =
   | "IDLE"
   | "WELCOME"
   | "MENU"
+  | "WAITING_ISSUE_DATA"
   | "WAITING_DESCRIPTION"
   | "WAITING_PROJECT"
   | "WAITING_LOCATION"
@@ -54,6 +55,8 @@ type DraftData = {
 
   my_issue_ids?: number[];
   my_issue_codes?: string[];
+
+  agent_ack_sent?: boolean;
 };
 
 type Conversation = {
@@ -96,7 +99,7 @@ type WhatsAppWebhookBody = {
 };
 
 /* =========================================================
-   MENU / CONSTANTS
+   CONSTANTS
 ========================================================= */
 
 const PROJECTS = [
@@ -124,10 +127,6 @@ const PRIORITIES = [
   "Low",
 ];
 
-/* =========================================================
-   CONVERSATION TIMEOUT
-========================================================= */
-
 const CONVERSATION_TIMEOUT_MS =
   30 * 60 * 1000;
 
@@ -138,13 +137,15 @@ const CONVERSATION_TIMEOUT_MS =
 function welcomeMessage() {
   return `👋 *Halo, selamat datang di Helpdesk System.*
 
-Pesan Anda telah diterima.
+Silakan pilih layanan:
 
-Untuk melihat layanan yang tersedia dan melanjutkan proses, silakan ketik:
+1️⃣ 📝 Buat Issue
+2️⃣ 🔍 Cek Status
+3️⃣ 📋 My Issues
+4️⃣ ❓ Bantuan
+5️⃣ 👨‍💻 Hubungi Helpdesk
 
-👉 *MENU*
-
-Kami siap membantu Anda.`;
+Ketik *1-5* untuk memilih.`;
 }
 
 /* =========================================================
@@ -154,21 +155,13 @@ Kami siap membantu Anda.`;
 function mainMenu() {
   return `📋 *Menu Helpdesk*
 
-Silakan pilih layanan yang Anda butuhkan:
-
-1️⃣ 📝 Buat Laporan Issue
-2️⃣ 🔍 Cek Status Issue
+1️⃣ 📝 Buat Issue
+2️⃣ 🔍 Cek Status
 3️⃣ 📋 My Issues
 4️⃣ ❓ Bantuan
 5️⃣ 👨‍💻 Hubungi Helpdesk
 
-Ketik angka *1-5* untuk memilih.
-
-Contoh:
-*1*
-
-Ketik *MENU* kapan saja untuk kembali ke menu utama.
-Ketik *BATAL* untuk membatalkan proses.`;
+Ketik *1-5*.`;
 }
 
 /* =========================================================
@@ -178,28 +171,18 @@ Ketik *BATAL* untuk membatalkan proses.`;
 function helpMessage() {
   return `❓ *Bantuan Helpdesk*
 
-Berikut layanan yang tersedia:
+📝 *1* — Buat laporan issue
+🔍 *2* — Cek status issue
+📋 *3* — Lihat My Issues
+👨‍💻 *5* — Hubungi Helpdesk
 
-📝 *Buat Laporan Issue*
-Untuk membuat laporan masalah baru.
-
-🔍 *Cek Status Issue*
-Untuk mengecek status berdasarkan Issue Code.
-
-📋 *My Issues*
-Untuk melihat laporan issue yang dibuat melalui WhatsApp.
-
-👨‍💻 *Hubungi Helpdesk*
-Untuk menghubungi tim Helpdesk.
-
-Perintah yang bisa digunakan:
-
-*MENU* → Menu utama
-*BATAL* → Batalkan proses
-*STATUS* → Cek status issue
-*MY ISSUES* → Lihat issue Anda
-*BUAT ISSUE* → Buat issue baru
-*AGENT* → Hubungi Helpdesk`;
+Perintah cepat:
+*BUAT ISSUE*
+*STATUS ISS-YYYYMMDD-XXX*
+*MY ISSUES*
+*AGENT*
+*MENU*
+*BATAL*`;
 }
 
 /* =========================================================
@@ -279,8 +262,6 @@ async function saveWhatsAppMessage(
     if (!messageId) {
       return null;
     }
-
-    /* Duplicate check */
 
     const { data: existing } =
       await supabase
@@ -461,10 +442,8 @@ function isConversationExpired(
     return false;
   }
 
-  const now = Date.now();
-
   return (
-    now - lastActivity >=
+    Date.now() - lastActivity >=
     CONVERSATION_TIMEOUT_MS
   );
 }
@@ -478,12 +457,106 @@ async function startCreateIssue(
 ) {
   await saveConversation(
     phoneNumber,
-    "WAITING_DESCRIPTION",
+    "WAITING_ISSUE_DATA",
     {
       started_at:
         new Date().toISOString(),
     }
   );
+}
+
+/* =========================================================
+   ISSUE DATA PROMPT
+========================================================= */
+
+function issueDataPrompt() {
+  return `📝 *Buat Laporan Issue*
+
+Kirim semua data dalam *1 pesan*:
+
+*Issue:* Jelaskan masalah
+*Project:* TAM / BPKB / STNK / Mahindra / Hyundai / LMS
+*Location:* Lokasi issue
+*Category:* Hardware / Software / Network / Server / Application / Other
+*Priority:* Critical / High / Medium / Low
+
+Contoh:
+*Issue:* Printer CFD tidak bisa mencetak
+*Project:* TAM
+*Location:* NVDC Sunter
+*Category:* Hardware
+*Priority:* High`;
+}
+
+/* =========================================================
+   PARSE ISSUE DATA
+========================================================= */
+
+function parseIssueData(text: string): {
+  description: string;
+  project: string;
+  location: string;
+  category: string;
+  priority: string;
+} | null {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const values: Record<string, string> =
+    {};
+
+  for (const line of lines) {
+    const match = line.match(
+      /^(Issue|Project|Location|Category|Priority)\s*:\s*(.+)$/i
+    );
+
+    if (match) {
+      values[
+        match[1].toLowerCase()
+      ] = match[2].trim();
+    }
+  }
+
+  const description =
+    values.issue || "";
+
+  const project =
+    parseProject(
+      values.project || ""
+    );
+
+  const category =
+    parseCategory(
+      values.category || ""
+    );
+
+  const priority =
+    parsePriority(
+      values.priority || ""
+    );
+
+  const location =
+    values.location || "";
+
+  if (
+    !description ||
+    !project ||
+    !location ||
+    !category ||
+    !priority
+  ) {
+    return null;
+  }
+
+  return {
+    description,
+    project,
+    location,
+    category,
+    priority,
+  };
 }
 
 /* =========================================================
@@ -584,6 +657,7 @@ function parsePriority(
 
 /* =========================================================
    PROJECT MENU
+   Legacy support
 ========================================================= */
 
 function projectMenu() {
@@ -594,13 +668,12 @@ function projectMenu() {
 3️⃣ STNK
 4️⃣ Mahindra
 5️⃣ Hyundai
-6️⃣ LMS
-
-Silakan ketik angka *1-6* atau nama project.`;
+6️⃣ LMS`;
 }
 
 /* =========================================================
    CATEGORY MENU
+   Legacy support
 ========================================================= */
 
 function categoryMenu() {
@@ -611,13 +684,12 @@ function categoryMenu() {
 3️⃣ Network
 4️⃣ Server
 5️⃣ Application
-6️⃣ Other
-
-Silakan ketik angka *1-6* atau nama category.`;
+6️⃣ Other`;
 }
 
 /* =========================================================
    PRIORITY MENU
+   Legacy support
 ========================================================= */
 
 function priorityMenu() {
@@ -626,9 +698,7 @@ function priorityMenu() {
 1️⃣ Critical
 2️⃣ High
 3️⃣ Medium
-4️⃣ Low
-
-Silakan ketik angka *1-4* atau nama priority.`;
+4️⃣ Low`;
 }
 
 /* =========================================================
@@ -638,32 +708,19 @@ Silakan ketik angka *1-4* atau nama priority.`;
 function confirmationMessage(
   draft: DraftData
 ) {
-  return `📝 *Konfirmasi Laporan Issue*
+  return `📝 *Konfirmasi Issue*
 
-Silakan periksa data berikut:
+📝 *Issue:* ${draft.description || "-"}
+📁 *Project:* ${draft.project || "-"}
+📍 *Location:* ${draft.location || "-"}
+🏷️ *Category:* ${draft.category || "-"}
+⚡ *Priority:* ${draft.priority || "-"}
 
-*Issue:*
-${draft.description || "-"}
-
-*Project:*
-${draft.project || "-"}
-
-*Location:*
-${draft.location || "-"}
-
-*Category:*
-${draft.category || "-"}
-
-*Priority:*
-${draft.priority || "-"}
-
-Apakah data sudah benar?
-
-1️⃣ Ya, Buat Laporan
+1️⃣ Ya, Buat
 2️⃣ Ubah Data
 3️⃣ Batalkan
 
-Ketik angka *1-3*.`;
+Ketik *1-3*.`;
 }
 
 /* =========================================================
@@ -675,16 +732,15 @@ function editMenu(
 ) {
   return `✏️ *Ubah Data Issue*
 
-Pilih data yang ingin diubah:
+Kirim ulang semua data dalam *1 pesan*:
 
-1️⃣ Deskripsi
-2️⃣ Project
-3️⃣ Location
-4️⃣ Category
-5️⃣ Priority
-6️⃣ Kembali ke Konfirmasi
+*Issue:* Jelaskan masalah
+*Project:* TAM / BPKB / STNK / Mahindra / Hyundai / LMS
+*Location:* Lokasi issue
+*Category:* Hardware / Software / Network / Server / Application / Other
+*Priority:* Critical / High / Medium / Low
 
-Ketik angka *1-6*.`;
+Data lama akan diganti.`;
 }
 
 /* =========================================================
@@ -794,9 +850,12 @@ async function sendIssueStatus(
   phoneNumber: string,
   issueCode: string
 ) {
+  const normalizedCode =
+    issueCode.trim().toUpperCase();
+
   const issue =
     await getIssueByCode(
-      issueCode
+      normalizedCode
     );
 
   if (!issue) {
@@ -804,24 +863,16 @@ async function sendIssueStatus(
       phoneNumber,
       `❌ *Issue tidak ditemukan.*
 
-Issue Code:
-*${issueCode.trim().toUpperCase()}*
+*${normalizedCode}*
 
-Pastikan Issue Code yang Anda masukkan sudah benar.
+Pastikan Issue Code benar.
 
 Contoh:
-*ISS-20260916-022*
-
-Ketik *STATUS* untuk mencoba lagi.
-Ketik *MENU* untuk kembali ke menu utama.`
+*ISS-20260916-022*`
     );
 
     return;
   }
-
-  /* =====================================================
-     GET ISSUE HISTORY
-  ===================================================== */
 
   const {
     data: history,
@@ -858,10 +909,6 @@ Ketik *MENU* untuk kembali ke menu utama.`
     );
   }
 
-  /* =====================================================
-     FORMAT HISTORY
-  ===================================================== */
-
   let historyText =
     "Belum ada riwayat perubahan.";
 
@@ -878,8 +925,6 @@ Ketik *MENU* untuk kembali ke menu utama.`
           ) => {
             const changes: string[] =
               [];
-
-            /* Status */
 
             if (
               item.old_status ||
@@ -901,8 +946,6 @@ Ketik *MENU* untuk kembali ke menu utama.`
               }
             }
 
-            /* Priority */
-
             if (
               item.old_priority ||
               item.new_priority
@@ -923,8 +966,6 @@ Ketik *MENU* untuk kembali ke menu utama.`
               }
             }
 
-            /* Description */
-
             if (
               item.description
             ) {
@@ -932,8 +973,6 @@ Ketik *MENU* untuk kembali ke menu utama.`
                 item.description
               );
             }
-
-            /* Date */
 
             const date =
               item.created_at
@@ -954,18 +993,16 @@ Ketik *MENU* untuk kembali ke menu utama.`
               item.action ||
               "Update"
             }
-${changes.length > 0
-  ? changes.join("\n")
-  : "Tidak ada detail perubahan."}
+${
+  changes.length > 0
+    ? changes.join("\n")
+    : "Tidak ada detail perubahan."
+}
 🕐 ${date}`;
           }
         )
         .join("\n\n");
   }
-
-  /* =====================================================
-     FORMAT DATE
-  ===================================================== */
 
   const createdAt =
     issue.created_at
@@ -997,67 +1034,37 @@ ${changes.length > 0
         )
       : "-";
 
-  /* =====================================================
-     SEND DETAIL
-  ===================================================== */
-
   await sendWhatsAppMessage(
     phoneNumber,
-    `🔍 *DETAIL STATUS ISSUE*
+    `🔍 *DETAIL ISSUE*
 
-━━━━━━━━━━━━━━
+*${issue.issue_code}*
 
-*Issue Code:*
-${issue.issue_code}
+📝 *Issue:* ${issue.title || "-"}
+📄 *Description:* ${issue.description || "-"}
+📁 *Project:* ${issue.project || "-"}
+📍 *Location:* ${issue.location || "-"}
+🏷️ *Category:* ${issue.category || "-"}
+⚡ *Priority:* ${issue.priority || "-"}
+📊 *Status:* ${issue.status || "-"}
+👨‍💻 *Assignee:* ${
+      issue.assignee ||
+      "Belum ditugaskan"
+    }
+🛠️ *Resolution:* ${
+      issue.resolution ||
+      "Belum ada"
+    }
 
-*Issue:*
-${issue.title || "-"}
+📅 Dibuat: ${createdAt}
+🔄 Update: ${updatedAt}
 
-*Description:*
-${issue.description || "-"}
-
-*Project:*
-${issue.project || "-"}
-
-*Location:*
-${issue.location || "-"}
-
-*Category:*
-${issue.category || "-"}
-
-*Priority:*
-${issue.priority || "-"}
-
-*Status:*
-${issue.status || "-"}
-
-*Assignee:*
-${issue.assignee || "Belum ditugaskan"}
-
-*Resolution:*
-${issue.resolution || "Belum ada"}
-
-━━━━━━━━━━━━━━
-
-📅 *Dibuat:*
-${createdAt}
-
-🔄 *Update terakhir:*
-${updatedAt}
-
-━━━━━━━━━━━━━━
-
-📜 *Riwayat Terakhir*
-
+📜 *Riwayat*
 ${historyText}
 
-━━━━━━━━━━━━━━
-
-Ketik *STATUS* untuk cek issue lain.
-
-Ketik *MY ISSUES* untuk melihat laporan Anda.
-
-Ketik *MENU* untuk kembali ke menu utama.`
+Ketik *STATUS ISSUE-CODE* untuk cek issue lain.
+Ketik *MY ISSUES* untuk melihat laporan.
+Ketik *MENU* untuk menu utama.`
   );
 }
 
@@ -1106,13 +1113,10 @@ async function sendMyIssues(
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `❌ *Gagal mengambil My Issues.*
+      `❌ Gagal mengambil My Issues.
 
-Terjadi kesalahan saat mengambil data laporan Anda.
-
-Silakan coba lagi dengan mengetik:
-
-👉 *MY ISSUES*`
+Coba lagi:
+*MY ISSUES*`
     );
 
     return;
@@ -1132,23 +1136,13 @@ Silakan coba lagi dengan mengetik:
       phoneNumber,
       `📋 *MY ISSUES*
 
-Belum ada issue yang dibuat melalui nomor WhatsApp ini.
+Belum ada issue dari nomor WhatsApp ini.
 
-Anda dapat membuat laporan baru dengan mengetik:
-
-👉 *BUAT ISSUE*
-
-━━━━━━━━━━━━━━
-
-${mainMenu()}`
+Ketik *BUAT ISSUE* untuk membuat laporan.`
     );
 
     return;
   }
-
-  /* =====================================================
-     FORMAT ISSUE LIST
-  ===================================================== */
 
   const issueList =
     data
@@ -1157,64 +1151,33 @@ ${mainMenu()}`
           issue,
           index
         ) => {
-          const createdAt =
-            issue.created_at
-              ? new Date(
-                  issue.created_at
-                ).toLocaleDateString(
-                  "id-ID"
-                )
-              : "-";
-
-          return `${index + 1}️⃣ *${
-            issue.issue_code
-          }*
-
-📝 Issue: ${
-            issue.title || "-"
-          }
-
-📁 Project: ${
-            issue.project || "-"
-          }
-
-📍 Location: ${
-            issue.location || "-"
-          }
-
-🏷️ Category: ${
-            issue.category || "-"
-          }
-
-⚡ Priority: ${
-            issue.priority || "-"
-          }
-
-📊 Status: ${
-            issue.status || "-"
-          }
-
-👨‍💻 Assignee: ${
-            issue.assignee ||
-            "Belum ditugaskan"
-          }
-
-📅 Dibuat: ${createdAt}`;
+          return `${index + 1}️⃣ *${issue.issue_code}*
+📝 ${issue.title || "-"}
+📁 ${issue.project || "-"} | 📍 ${issue.location || "-"}
+⚡ ${issue.priority || "-"} | 📊 ${issue.status || "-"}`;
         }
       )
-      .join(
-        "\n\n━━━━━━━━━━━━━━\n\n"
-      );
+      .join("\n\n");
 
-  const myIssueIds = data.map((issue) => issue.id);
-  const myIssueCodes = data.map((issue) => issue.issue_code);
+  const myIssueIds =
+    data.map(
+      (issue) => issue.id
+    );
+
+  const myIssueCodes =
+    data.map(
+      (issue) =>
+        issue.issue_code
+    );
 
   await saveConversation(
     phoneNumber,
     "WAITING_MY_ISSUE_SELECTION",
     {
-      my_issue_ids: myIssueIds,
-      my_issue_codes: myIssueCodes,
+      my_issue_ids:
+        myIssueIds,
+      my_issue_codes:
+        myIssueCodes,
     }
   );
 
@@ -1222,19 +1185,12 @@ ${mainMenu()}`
     phoneNumber,
     `📋 *MY ISSUES*
 
-Berikut laporan issue yang dibuat melalui nomor WhatsApp Anda:
-
 ${issueList}
 
-━━━━━━━━━━━━━━
+Ketik nomor untuk melihat detail.
+Contoh: *1*
 
-👉 *Ketik nomor issue* untuk melihat detail.
-
-Contoh:
-*1* untuk melihat detail issue nomor 1.
-
-Ketik *BUAT ISSUE* untuk membuat laporan baru.
-Ketik *MENU* untuk kembali ke menu utama.`
+Ketik *MENU* untuk kembali.`
   );
 }
 
@@ -1381,9 +1337,7 @@ async function createIssueFromDraft(
         phoneNumber,
         `❌ *Gagal membuat issue.*
 
-Terjadi kesalahan saat menyimpan laporan.
-
-Silakan coba lagi dengan mengetik:
+Silakan coba lagi:
 *BUAT ISSUE*`
       );
 
@@ -1460,41 +1414,25 @@ Silakan coba lagi dengan mengetik:
     }
 
     /* =====================================================
-       SEND SUCCESS
+       SUCCESS
     ===================================================== */
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `✅ *Laporan Issue Berhasil Dibuat*
+      `✅ *Issue Berhasil Dibuat*
 
-*Issue Code:*
-${issue.issue_code}
+*${issue.issue_code}*
 
-*Issue:*
-${issue.title || "-"}
+📝 ${issue.title || "-"}
+📁 ${issue.project || "-"}
+📍 ${issue.location || "-"}
+🏷️ ${issue.category || "-"}
+⚡ ${issue.priority || "-"}
+📊 ${issue.status || "-"}
 
-*Project:*
-${issue.project || "-"}
+Laporan sudah masuk ke Helpdesk.
 
-*Location:*
-${issue.location || "-"}
-
-*Category:*
-${issue.category || "-"}
-
-*Priority:*
-${issue.priority || "-"}
-
-*Status:*
-${issue.status || "-"}
-
-━━━━━━━━━━━━━━
-
-Laporan sudah masuk ke sistem Helpdesk.
-
-Ketik *STATUS* untuk mengecek status issue.
-
-Ketik *MENU* untuk kembali ke menu utama.`
+Ketik *STATUS ${issue.issue_code}* untuk melihat status.`
     );
 
     await saveConversation(
@@ -1530,26 +1468,20 @@ async function handleMenuState(
   text: string
 ) {
   switch (text) {
-    case "1":
+    case "1": {
       await startCreateIssue(
         phoneNumber
       );
 
       await sendWhatsAppMessage(
         phoneNumber,
-        `📝 *Buat Laporan Issue*
-
-Silakan jelaskan masalah yang ingin dilaporkan.
-
-Contoh:
-*Printer CFD tidak bisa mencetak dokumen.*
-
-Ketik *BATAL* jika ingin membatalkan.`
+        issueDataPrompt()
       );
 
       return;
+    }
 
-    case "2":
+    case "2": {
       await saveConversation(
         phoneNumber,
         "WAITING_ISSUE_CODE",
@@ -1560,62 +1492,68 @@ Ketik *BATAL* jika ingin membatalkan.`
         phoneNumber,
         `🔍 *Cek Status Issue*
 
-Masukkan *Issue Code*.
+Kirim Issue Code.
 
 Contoh:
-*ISS-20260916-022*
+*STATUS ISS-20260916-022*
 
-Ketik *BATAL* untuk kembali.`
+Atau cukup kirim:
+*ISS-20260916-022*`
       );
 
       return;
+    }
 
-    case "3":
+    case "3": {
       await sendMyIssues(
         phoneNumber
       );
 
       return;
+    }
 
-    case "4":
+    case "4": {
       await sendWhatsAppMessage(
         phoneNumber,
         helpMessage()
       );
 
       return;
+    }
 
-    case "5":
+    case "5": {
       await saveConversation(
         phoneNumber,
         "AGENT",
-        {}
+        {
+          agent_ack_sent: false,
+        }
       );
 
       await sendWhatsAppMessage(
         phoneNumber,
         `👨‍💻 *Hubungi Helpdesk*
 
-Silakan jelaskan kebutuhan Anda.
+Silakan kirim pesan Anda.
 
-Tim Helpdesk akan menindaklanjuti pesan Anda.
+Pesan pertama akan mendapat konfirmasi otomatis.
 
-Ketik *BATAL* jika ingin membatalkan.`
+Ketik *MENU* untuk kembali.`
       );
 
       return;
+    }
 
-    default:
+    default: {
       await sendWhatsAppMessage(
         phoneNumber,
-        `❌ *Pilihan tidak valid.*
+        `❌ Pilihan tidak valid.
 
-Silakan pilih angka *1-5*.
-
-${mainMenu()}`
+Ketik *1-5*.`
       );
 
       return;
+    }
   }
 }
 
@@ -1657,13 +1595,28 @@ async function handleConversationState(
         return;
       }
 
+      if (
+        [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+        ].includes(text)
+      ) {
+        await handleMenuState(
+          phoneNumber,
+          text
+        );
+
+        return;
+      }
+
       await sendWhatsAppMessage(
         phoneNumber,
-        `Untuk melanjutkan layanan Helpdesk, silakan ketik:
+        `❌ Pilihan tidak valid.
 
-👉 *MENU*
-
-Setelah itu Anda dapat memilih layanan yang tersedia.`
+Ketik *1-5*.`
       );
 
       return;
@@ -1726,46 +1679,31 @@ Setelah itu Anda dapat memilih layanan yang tersedia.`
 
         await sendWhatsAppMessage(
           phoneNumber,
-          `✅ Pesan Anda berhasil ditambahkan ke issue:
+          `✅ Pesan ditambahkan ke issue:
 
 *${draft.active_issue_code || "-"}*
 
-Status saat ini:
+Status:
 *${draft.active_issue_status || "-"}*
 
-Ketik *MENU* untuk kembali ke menu utama.`
+Ketik *MENU* untuk kembali.`
         );
 
         return;
       }
 
       if (text === "2") {
-        await saveConversation(
-          phoneNumber,
-          "WAITING_PROJECT",
-          {
-            description:
-              draft.pending_message_text ||
-              "",
-            pending_message_id:
-              draft.pending_message_id ||
-              messageId ||
-              undefined,
-            started_at:
-              draft.started_at ||
-              new Date().toISOString(),
-          }
+        /*
+         * Buat issue baru langsung menggunakan
+         * format 5 field dalam 1 pesan.
+         */
+        await startCreateIssue(
+          phoneNumber
         );
 
         await sendWhatsAppMessage(
           phoneNumber,
-          `📝 *Buat Laporan Issue Baru*
-
-Pesan Anda akan digunakan sebagai deskripsi issue.
-
-Silakan pilih project:
-
-${projectMenu()}`
+          issueDataPrompt()
         );
 
         return;
@@ -1812,201 +1750,54 @@ ${projectMenu()}`
         phoneNumber,
         `❌ Pilihan tidak valid.
 
-Silakan pilih:
-
 1️⃣ Tambahkan ke Issue
 2️⃣ Buat Issue Baru
-3️⃣ Lihat Status Issue
-4️⃣ Kembali ke Menu`
+3️⃣ Lihat Status
+4️⃣ Menu`
       );
 
       return;
     }
 
     /* =====================================================
-       WAITING DESCRIPTION
+       WAITING ISSUE DATA
     ===================================================== */
 
-    case "WAITING_DESCRIPTION": {
-      if (!text) {
+    case "WAITING_ISSUE_DATA": {
+      const parsed =
+        parseIssueData(text);
+
+      if (!parsed) {
         await sendWhatsAppMessage(
           phoneNumber,
-          `❌ Deskripsi tidak boleh kosong.
+          `❌ *Data belum lengkap.*
 
-Silakan jelaskan masalah yang ingin dilaporkan.`
+Kirim 5 data dalam *1 pesan*:
+
+*Issue:* ...
+*Project:* ...
+*Location:* ...
+*Category:* ...
+*Priority:* ...`
         );
 
         return;
       }
 
-      await saveConversation(
-        phoneNumber,
-        "WAITING_PROJECT",
-        {
-          ...draft,
-          description:
-            text,
-          started_at:
-            draft.started_at ||
-            new Date().toISOString(),
-          pending_message_id:
-            draft.pending_message_id ||
-            messageId ||
-            undefined,
-          pending_message_text:
-            draft.pending_message_text ||
-            text,
-        }
-      );
-
-      await sendWhatsAppMessage(
-        phoneNumber,
-        projectMenu()
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       WAITING PROJECT
-    ===================================================== */
-
-    case "WAITING_PROJECT": {
-      const project =
-        parseProject(text);
-
-      if (!project) {
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `❌ Project tidak valid.
-
-${projectMenu()}`
-        );
-
-        return;
-      }
-
-      await saveConversation(
-        phoneNumber,
-        "WAITING_LOCATION",
-        {
-          ...draft,
-          project,
-        }
-      );
-
-      await sendWhatsAppMessage(
-        phoneNumber,
-        `📍 *Location*
-
-Silakan masukkan lokasi issue.
-
-Contoh:
-*NVDC Cibitung*
-*NVDC Sunter*
-*NVDC Karawang*
-*BPKB Makassar*
-
-Ketik nama lokasi secara langsung.`
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       WAITING LOCATION
-    ===================================================== */
-
-    case "WAITING_LOCATION": {
-      if (!text) {
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `❌ Location tidak boleh kosong.
-
-Silakan masukkan lokasi issue.`
-        );
-
-        return;
-      }
-
-      await saveConversation(
-        phoneNumber,
-        "WAITING_CATEGORY",
-        {
-          ...draft,
-          location:
-            text,
-        }
-      );
-
-      await sendWhatsAppMessage(
-        phoneNumber,
-        categoryMenu()
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       WAITING CATEGORY
-    ===================================================== */
-
-    case "WAITING_CATEGORY": {
-      const category =
-        parseCategory(text);
-
-      if (!category) {
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `❌ Category tidak valid.
-
-${categoryMenu()}`
-        );
-
-        return;
-      }
-
-      await saveConversation(
-        phoneNumber,
-        "WAITING_PRIORITY",
-        {
-          ...draft,
-          category,
-        }
-      );
-
-      await sendWhatsAppMessage(
-        phoneNumber,
-        priorityMenu()
-      );
-
-      return;
-    }
-
-    /* =====================================================
-       WAITING PRIORITY
-    ===================================================== */
-
-    case "WAITING_PRIORITY": {
-      const priority =
-        parsePriority(text);
-
-      if (!priority) {
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `❌ Priority tidak valid.
-
-${priorityMenu()}`
-        );
-
-        return;
-      }
-
-      const updatedDraft:
-        DraftData = {
-          ...draft,
-          priority,
-        };
+      const updatedDraft: DraftData = {
+        ...draft,
+        ...parsed,
+        started_at:
+          draft.started_at ||
+          new Date().toISOString(),
+        pending_message_id:
+          draft.pending_message_id ||
+          messageId ||
+          undefined,
+        pending_message_text:
+          draft.pending_message_text ||
+          text,
+      };
 
       await saveConversation(
         phoneNumber,
@@ -2019,6 +1810,39 @@ ${priorityMenu()}`
         confirmationMessage(
           updatedDraft
         )
+      );
+
+      return;
+    }
+
+    /* =====================================================
+       LEGACY STEP-BY-STEP STATES
+    ===================================================== */
+
+    case "WAITING_DESCRIPTION":
+    case "WAITING_PROJECT":
+    case "WAITING_LOCATION":
+    case "WAITING_CATEGORY":
+    case "WAITING_PRIORITY": {
+      /*
+       * Conversation lama tetap aman.
+       * Semua diarahkan ke format baru.
+       */
+
+      await saveConversation(
+        phoneNumber,
+        "WAITING_ISSUE_DATA",
+        {
+          ...draft,
+          started_at:
+            draft.started_at ||
+            new Date().toISOString(),
+        }
+      );
+
+      await sendWhatsAppMessage(
+        phoneNumber,
+        issueDataPrompt()
       );
 
       return;
@@ -2072,11 +1896,7 @@ ${priorityMenu()}`
           phoneNumber,
           `❌ *Pembuatan issue dibatalkan.*
 
-Tidak ada laporan yang dibuat.
-
-Untuk kembali ke layanan utama, ketik:
-
-👉 *MENU*`
+Ketik *MENU* untuk layanan utama.`
         );
 
         return;
@@ -2086,9 +1906,9 @@ Untuk kembali ke layanan utama, ketik:
         phoneNumber,
         `❌ Pilihan tidak valid.
 
-${confirmationMessage(
-  draft
-)}`
+1️⃣ Buat Issue
+2️⃣ Ubah Data
+3️⃣ Batalkan`
       );
 
       return;
@@ -2099,92 +1919,38 @@ ${confirmationMessage(
     ===================================================== */
 
     case "EDITING_ISSUE": {
-      if (text === "1") {
+      const parsed =
+        parseIssueData(text);
+
+      if (parsed) {
+        const updatedDraft: DraftData = {
+          ...draft,
+          ...parsed,
+          started_at:
+            draft.started_at ||
+            new Date().toISOString(),
+        };
+
         await saveConversation(
           phoneNumber,
-          "WAITING_DESCRIPTION",
-          draft
+          "CONFIRMING_ISSUE",
+          updatedDraft
         );
 
         await sendWhatsAppMessage(
           phoneNumber,
-          `✏️ *Ubah Deskripsi*
-
-Silakan masukkan deskripsi issue yang baru.`
+          confirmationMessage(
+            updatedDraft
+          )
         );
 
         return;
       }
 
-      if (text === "2") {
-        await saveConversation(
-          phoneNumber,
-          "WAITING_PROJECT",
-          draft
-        );
-
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `✏️ *Ubah Project*
-
-${projectMenu()}`
-        );
-
-        return;
-      }
-
-      if (text === "3") {
-        await saveConversation(
-          phoneNumber,
-          "WAITING_LOCATION",
-          draft
-        );
-
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `✏️ *Ubah Location*
-
-Silakan masukkan lokasi yang baru.`
-        );
-
-        return;
-      }
-
-      if (text === "4") {
-        await saveConversation(
-          phoneNumber,
-          "WAITING_CATEGORY",
-          draft
-        );
-
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `✏️ *Ubah Category*
-
-${categoryMenu()}`
-        );
-
-        return;
-      }
-
-      if (text === "5") {
-        await saveConversation(
-          phoneNumber,
-          "WAITING_PRIORITY",
-          draft
-        );
-
-        await sendWhatsAppMessage(
-          phoneNumber,
-          `✏️ *Ubah Priority*
-
-${priorityMenu()}`
-        );
-
-        return;
-      }
-
-      if (text === "6") {
+      if (
+        text === "6" ||
+        text === "KEMBALI"
+      ) {
         await saveConversation(
           phoneNumber,
           "CONFIRMING_ISSUE",
@@ -2203,7 +1969,7 @@ ${priorityMenu()}`
 
       await sendWhatsAppMessage(
         phoneNumber,
-        `❌ Pilihan tidak valid.
+        `❌ *Format belum lengkap.*
 
 ${editMenu(draft)}`
       );
@@ -2247,31 +2013,40 @@ Contoh:
     ===================================================== */
 
     case "WAITING_MY_ISSUE_SELECTION": {
-      const selectedNumber = Number(text);
-      const issueCodes = draft.my_issue_codes || [];
+      const selectedNumber =
+        Number(text);
+
+      const issueCodes =
+        draft.my_issue_codes ||
+        [];
 
       if (
-        !Number.isInteger(selectedNumber) ||
+        !Number.isInteger(
+          selectedNumber
+        ) ||
         selectedNumber < 1 ||
-        selectedNumber > issueCodes.length
+        selectedNumber >
+          issueCodes.length
       ) {
         await sendWhatsAppMessage(
           phoneNumber,
-          `❌ *Pilihan tidak valid.*
+          `❌ Pilihan tidak valid.
 
-Silakan ketik nomor issue sesuai daftar *My Issues*.
-
-Contoh:
-*1*`
+Ketik nomor issue dari daftar.
+Contoh: *1*`
         );
 
         return;
       }
 
       const selectedIssueCode =
-        issueCodes[selectedNumber - 1];
+        issueCodes[
+          selectedNumber - 1
+        ];
 
-      if (!selectedIssueCode) {
+      if (
+        !selectedIssueCode
+      ) {
         await saveConversation(
           phoneNumber,
           "MENU",
@@ -2280,9 +2055,9 @@ Contoh:
 
         await sendWhatsAppMessage(
           phoneNumber,
-          `❌ Issue tidak dapat ditemukan.
+          `❌ Issue tidak ditemukan.
 
-Ketik *MY ISSUES* untuk melihat daftar issue Anda lagi.`
+Ketik *MY ISSUES* untuk melihat daftar lagi.`
         );
 
         return;
@@ -2321,24 +2096,38 @@ Ketik *MY ISSUES* untuk melihat daftar issue Anda lagi.`
           phoneNumber,
           `❌ *Proses dibatalkan.*
 
-Tidak ada laporan yang dibuat.
-
-Untuk kembali ke layanan utama, ketik:
-
-👉 *MENU*`
+Ketik *MENU* untuk kembali.`
         );
 
         return;
       }
 
-      await sendWhatsAppMessage(
-        phoneNumber,
-        `📨 Pesan Anda sudah diterima oleh Helpdesk.
+      /*
+       * Hanya pesan pertama yang mendapat
+       * auto acknowledgment.
+       */
 
-Tim Helpdesk akan menindaklanjuti pesan Anda.
+      if (
+        !draft.agent_ack_sent
+      ) {
+        await sendWhatsAppMessage(
+          phoneNumber,
+          `📨 *Pesan diterima Helpdesk.*
 
-Ketik *BATAL* jika ingin membatalkan.`
-      );
+Tim Helpdesk akan menindaklanjuti.
+
+Ketik *MENU* untuk kembali.`
+        );
+
+        await saveConversation(
+          phoneNumber,
+          "AGENT",
+          {
+            agent_ack_sent:
+              true,
+          }
+        );
+      }
 
       return;
     }
@@ -2349,14 +2138,6 @@ Ketik *BATAL* jika ingin membatalkan.`
 
     case "IDLE":
     default: {
-      /*
-       * User belum pernah memulai percakapan
-       * atau conversation sudah kembali ke IDLE.
-       *
-       * Jangan langsung tampilkan menu.
-       * Arahkan user untuk mengetik MENU.
-       */
-
       await saveConversation(
         phoneNumber,
         "WELCOME",
@@ -2442,7 +2223,7 @@ async function processIncomingMessage(
     );
 
   /* =====================================================
-     CHECK 30 MINUTE INACTIVITY
+     CHECK TIMEOUT
   ===================================================== */
 
   if (
@@ -2454,19 +2235,6 @@ async function processIncomingMessage(
       "WHATSAPP CONVERSATION EXPIRED:",
       phoneNumber
     );
-
-    /*
-     * Sesi lama dianggap selesai.
-     *
-     * Tidak menghapus:
-     * - issues
-     * - issue_history
-     * - whatsapp_messages
-     *
-     * Hanya mereset conversation:
-     * - state -> IDLE
-     * - draft_data -> {}
-     */
 
     await saveConversation(
       phoneNumber,
@@ -2491,13 +2259,6 @@ async function processIncomingMessage(
     text === "BATAL" ||
     text === "CANCEL"
   ) {
-    /*
-     * BATAL tidak menampilkan menu.
-     *
-     * User diarahkan untuk mengetik MENU
-     * apabila ingin kembali ke layanan utama.
-     */
-
     await saveConversation(
       phoneNumber,
       "MENU",
@@ -2508,11 +2269,7 @@ async function processIncomingMessage(
       phoneNumber,
       `❌ *Proses dibatalkan.*
 
-Tidak ada laporan yang dibuat.
-
-Untuk kembali ke layanan utama, ketik:
-
-👉 *MENU*`
+Ketik *MENU* untuk layanan utama.`
     );
 
     return;
@@ -2552,14 +2309,67 @@ Untuk kembali ke layanan utama, ketik:
 
     await sendWhatsAppMessage(
       phoneNumber,
-      `📝 *Buat Laporan Issue*
+      issueDataPrompt()
+    );
 
-Silakan jelaskan masalah yang ingin dilaporkan.
+    return;
+  }
 
-Contoh:
-*Printer CFD tidak bisa mencetak dokumen.*
+  /* =====================================================
+     GLOBAL COMMAND: STATUS <CODE>
+     Direct status lookup
+  ===================================================== */
 
-Ketik *BATAL* jika ingin membatalkan.`
+  if (
+    text.startsWith("STATUS ") ||
+    text.startsWith("CEK STATUS ")
+  ) {
+    const issueCode =
+      text
+        .replace(
+          /^STATUS\s+/i,
+          ""
+        )
+        .replace(
+          /^CEK STATUS\s+/i,
+          ""
+        )
+        .trim();
+
+    if (issueCode) {
+      await sendIssueStatus(
+        phoneNumber,
+        issueCode
+      );
+
+      await saveConversation(
+        phoneNumber,
+        "MENU",
+        {}
+      );
+
+      return;
+    }
+  }
+
+  /* =====================================================
+     GLOBAL COMMAND: ISSUE CODE DIRECT
+  ===================================================== */
+
+  if (
+    /^ISS-\d{8}-\d{3}$/i.test(
+      text
+    )
+  ) {
+    await sendIssueStatus(
+      phoneNumber,
+      text
+    );
+
+    await saveConversation(
+      phoneNumber,
+      "MENU",
+      {}
     );
 
     return;
@@ -2583,12 +2393,10 @@ Ketik *BATAL* jika ingin membatalkan.`
       phoneNumber,
       `🔍 *Cek Status Issue*
 
-Masukkan *Issue Code*.
+Kirim Issue Code.
 
 Contoh:
-*ISS-20260916-022*
-
-Ketik *BATAL* untuk membatalkan.`
+*ISS-20260916-022*`
     );
 
     return;
@@ -2637,18 +2445,20 @@ Ketik *BATAL* untuk membatalkan.`
     await saveConversation(
       phoneNumber,
       "AGENT",
-      {}
+      {
+        agent_ack_sent: false,
+      }
     );
 
     await sendWhatsAppMessage(
       phoneNumber,
       `👨‍💻 *Hubungi Helpdesk*
 
-Silakan jelaskan kebutuhan Anda.
+Silakan kirim pesan Anda.
 
-Tim Helpdesk akan menindaklanjuti pesan Anda.
+Pesan pertama mendapat konfirmasi otomatis.
 
-Ketik *BATAL* jika ingin membatalkan.`
+Ketik *MENU* untuk kembali.`
     );
 
     return;
@@ -2810,10 +2620,6 @@ export async function POST(
       }
     }
 
-    /*
-     * Meta membutuhkan response 200.
-     */
-
     return NextResponse.json(
       {
         success: true,
@@ -2827,11 +2633,6 @@ export async function POST(
       "WHATSAPP WEBHOOK POST ERROR:",
       error
     );
-
-    /*
-     * Tetap response 200 supaya Meta
-     * tidak terus melakukan retry terhadap webhook.
-     */
 
     return NextResponse.json(
       {
